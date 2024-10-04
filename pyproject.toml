@@ -50,10 +50,11 @@ pre-commit = [
     'pylint~=2.17.2',
     'pylint-aiida~=0.1.1',
     'toml',
+    'hatch',
 ]
 tests = [
     'pgtest',
-    'pytest',
+    'pytest~=7.0',
     'pytest-regressions'
 ]
 
@@ -145,6 +146,15 @@ disable = [
     'too-many-branches',
     'too-many-locals',
     'use-dict-literal',
+]
+
+[tool.pylint.basic]
+good-names = [
+    'i',
+    'j',
+    'k',
+    'StructureData',
+    'SinglefileData',
 ]
 
 [tool.yapf]

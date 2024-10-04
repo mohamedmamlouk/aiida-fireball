@@ -1,0 +1,267 @@
+import os
+
+import pytest
+
+pytest_plugins = ["aiida.tools.pytest_fixtures"]
+
+
+@pytest.fixture(scope="session")
+def filepath_tests():
+    """Return the absolute filepath of the `tests` folder.
+
+    .. warning:: if this file moves with respect to the `tests` folder, the implementation should change.
+
+    :return: absolute filepath of `tests` folder which is the basepath for all test resources.
+    """
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+@pytest.fixture
+def filepath_fixtures(filepath_tests):
+    """Return the absolute filepath to the directory containing the file `fixtures`."""
+    return os.path.join(filepath_tests, "fixtures")
+
+
+@pytest.fixture(scope="function")
+def fixture_sandbox():
+    """Return a `SandboxFolder`."""
+    from aiida.common.folders import SandboxFolder
+
+    with SandboxFolder() as folder:
+        yield folder
+
+
+@pytest.fixture
+def fixture_localhost(aiida_localhost):
+    """Return a localhost `Computer`."""
+    localhost = aiida_localhost
+    localhost.set_default_mpiprocs_per_machine(1)
+    return localhost
+
+
+@pytest.fixture
+def fixture_code(fixture_localhost):
+    """Return an ``InstalledCode`` instance configured to run calculations of given entry point on localhost."""
+
+    def _fixture_code(entry_point_name):
+        from aiida.common import exceptions
+        from aiida.orm import InstalledCode, load_code
+
+        label = f"test.{entry_point_name}"
+
+        try:
+            return load_code(label=label)
+        except exceptions.NotExistent:
+            return InstalledCode(
+                label=label,
+                computer=fixture_localhost,
+                filepath_executable="/bin/true",
+                default_calc_job_plugin=entry_point_name,
+            )
+
+    return _fixture_code
+
+
+@pytest.fixture
+def serialize_builder():
+    """Serialize the given process builder into a dictionary with nodes turned into their value representation.
+
+    :param builder: the process builder to serialize
+    :return: dictionary
+    """
+
+    def serialize_data(data):
+        # pylint: disable=too-many-return-statements
+        from aiida.orm import (
+            AbstractCode,
+            BaseType,
+            Data,
+            Dict,
+            KpointsData,
+            List,
+            RemoteData,
+            SinglefileData,
+            StructureData,
+        )
+
+        if isinstance(data, dict):
+            return {key: serialize_data(value) for key, value in data.items()}
+
+        if isinstance(data, BaseType):
+            return data.value
+
+        if isinstance(data, AbstractCode):
+            return data.full_label
+
+        if isinstance(data, Dict):
+            return data.get_dict()
+
+        if isinstance(data, List):
+            return data.get_list()
+
+        if isinstance(data, StructureData):
+            return data.get_formula()
+
+        if isinstance(data, RemoteData):
+            # For `RemoteData` we compute the hash of the repository. The value returned by `Node._get_hash` is not
+            # useful since it includes the hash of the absolute filepath and the computer UUID which vary between tests
+            return data.base.repository.hash()
+
+        if isinstance(data, KpointsData):
+            try:
+                return data.get_kpoints()
+            except AttributeError:
+                return data.get_kpoints_mesh()
+
+        if isinstance(data, SinglefileData):
+            return data.get_content()
+
+        if isinstance(data, Data):
+            return data.base.caching._get_hash()  # pylint: disable=protected-access
+
+        return data
+
+    def _serialize_builder(builder):
+        return serialize_data(builder._inputs(prune=True))  # pylint: disable=protected-access
+
+    return _serialize_builder
+
+
+@pytest.fixture
+def generate_structure():
+    """Return a ``StructureData`` representing either bulk silicon or a water molecule."""
+
+    def _generate_structure(structure_id="silicon"):
+        """Return a ``StructureData`` representing bulk silicon or a snapshot of a single water molecule dynamics.
+
+        :param structure_id: identifies the ``StructureData`` you want to generate. Either 'silicon' or 'water'.
+        """
+        from aiida.orm import StructureData
+
+        if structure_id.startswith("silicon"):
+            name1 = "Si0" if structure_id.endswith("kinds") else "Si"
+            name2 = "Si1" if structure_id.endswith("kinds") else "Si"
+            param = 5.43
+            cell = [[param / 2.0, param / 2.0, 0], [param / 2.0, 0, param / 2.0], [0, param / 2.0, param / 2.0]]
+            structure = StructureData(cell=cell)
+            structure.append_atom(position=(0.0, 0.0, 0.0), symbols="Si", name=name1)
+            structure.append_atom(position=(param / 4.0, param / 4.0, param / 4.0), symbols="Si", name=name2)
+        elif structure_id == "cobalt-prim":
+            cell = [[0.0, 2.715, 2.715], [2.715, 0.0, 2.715], [2.715, 2.715, 0.0]]
+            structure = StructureData(cell=cell)
+            structure.append_atom(position=(0.0, 0.0, 0.0), symbols="Co", name="Co")
+        elif structure_id == "water":
+            structure = StructureData(cell=[[5.29177209, 0.0, 0.0], [0.0, 5.29177209, 0.0], [0.0, 0.0, 5.29177209]])
+            structure.append_atom(position=[12.73464656, 16.7741411, 24.35076238], symbols="H", name="H")
+            structure.append_atom(position=[-29.3865565, 9.51707929, -4.02515904], symbols="H", name="H")
+            structure.append_atom(position=[1.04074437, -1.64320127, -1.27035021], symbols="O", name="O")
+        elif structure_id == "uranium":
+            param = 5.43
+            cell = [[param / 2.0, param / 2.0, 0], [param / 2.0, 0, param / 2.0], [0, param / 2.0, param / 2.0]]
+            structure = StructureData(cell=cell)
+            structure.append_atom(position=(0.0, 0.0, 0.0), symbols="U", name="U")
+            structure.append_atom(position=(param / 4.0, param / 4.0, param / 4.0), symbols="U", name="U")
+        elif structure_id == "2D-xy-arsenic":
+            cell = [[3.61, 0, 0], [-1.80, 3.13, 0], [0, 0, 21.3]]
+            structure = StructureData(cell=cell, pbc=(True, True, False))
+            structure.append_atom(position=(1.804, 1.042, 11.352), symbols="As", name="As")
+            structure.append_atom(position=(0, 2.083, 9.960), symbols="As", name="As")
+        elif structure_id == "1D-x-carbon":
+            cell = [[4.2, 0, 0], [0, 20, 0], [0, 0, 20]]
+            structure = StructureData(cell=cell, pbc=(True, False, False))
+            structure.append_atom(position=(0, 0, 0), symbols="C", name="C")
+        elif structure_id == "1D-y-carbon":
+            cell = [[20, 0, 0], [0, 4.2, 0], [0, 0, 20]]
+            structure = StructureData(cell=cell, pbc=(False, True, False))
+            structure.append_atom(position=(0, 0, 0), symbols="C", name="C")
+        elif structure_id == "1D-z-carbon":
+            cell = [[20, 0, 0], [0, 20, 0], [0, 0, 4.2]]
+            structure = StructureData(cell=cell, pbc=(False, False, True))
+            structure.append_atom(position=(0, 0, 0), symbols="C", name="C")
+        else:
+            raise KeyError(f'Unknown structure_id="{structure_id}"')
+        return structure
+
+    return _generate_structure
+
+
+@pytest.fixture
+def generate_structure_from_kinds():
+    """Return a dummy `StructureData` instance with the specified kind names."""
+
+    def _generate_structure_from_kinds(site_kind_names):
+        """Return a dummy `StructureData` instance with the specified kind names."""
+        import re
+
+        from aiida import orm
+
+        if not isinstance(site_kind_names, (list, tuple)):
+            site_kind_names = (site_kind_names,)
+
+        structure = orm.StructureData(cell=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+        for kind_name in site_kind_names:
+            structure.append_atom(name=kind_name, symbols=re.sub("[0-9]", "", kind_name), position=(0.0, 0.0, 0.0))
+
+        return structure
+
+    return _generate_structure_from_kinds
+
+
+@pytest.fixture
+def generate_kpoints_mesh():
+    """Return a `KpointsData` node."""
+
+    def _generate_kpoints_mesh(npoints):
+        """Return a `KpointsData` with a mesh of npoints in each direction."""
+        from aiida.orm import KpointsData
+
+        kpoints = KpointsData()
+        kpoints.set_kpoints_mesh([npoints] * 3)
+
+        return kpoints
+
+    return _generate_kpoints_mesh
+
+
+@pytest.fixture(scope="session")
+def generate_parser():
+    """Fixture to load a parser class for testing parsers."""
+
+    def _generate_parser(entry_point_name):
+        """Fixture to load a parser class for testing parsers.
+
+        :param entry_point_name: entry point name of the parser class
+        :return: the `Parser` sub class
+        """
+        from aiida.plugins import ParserFactory
+
+        return ParserFactory(entry_point_name)
+
+    return _generate_parser
+
+
+@pytest.fixture
+def generate_remote_data():
+    """Return a `RemoteData` node."""
+
+    def _generate_remote_data(computer, remote_path, entry_point_name=None):
+        """Return a `RemoteData` node."""
+        from aiida.common.links import LinkType
+        from aiida.orm import CalcJobNode, RemoteData
+        from aiida.plugins.entry_point import format_entry_point_string
+
+        entry_point = format_entry_point_string("aiida.calculations", entry_point_name)
+
+        remote = RemoteData(remote_path=remote_path)
+        remote.computer = computer
+
+        if entry_point_name is not None:
+            creator = CalcJobNode(computer=computer, process_type=entry_point)
+            creator.set_option("resources", {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            remote.base.links.add_incoming(creator, link_type=LinkType.CREATE, link_label="remote_folder")
+            creator.store()
+
+        return remote
+
+    return _generate_remote_data

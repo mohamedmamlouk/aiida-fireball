@@ -104,7 +104,7 @@ verdi data fireball export <PK>
 git clone https://github.com/ValkScripter/aiida-fireball .
 cd aiida-fireball
 pip install --upgrade pip
-pip install -e .[pre-commit,testing]  # install extra dependencies
+pip install -e .[pre-commit,tests]  # install extra dependencies
 pre-commit install  # install pre-commit hooks
 pytest -v  # discover and run all tests
 ```
