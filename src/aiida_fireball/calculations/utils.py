@@ -19,7 +19,7 @@ def _case_transform_dict(dictionary, dict_name, func_name, transform):
     new_dict = dict((transform(str(k)), v) for k, v in dictionary.items())
     if len(new_dict) != len(dictionary):
         num_items = Counter(transform(str(k)) for k in dictionary.keys())
-        double_keys = ",".join([k for k, v in num_items if v > 1])
+        double_keys = ",".join([k for k, v in num_items.items() if v > 1])
         raise exceptions.InputValidationError(
             f"Inside the dictionary `{dict_name}` there are the following keys that are repeated more than once when "
             f"compared case-insensitively: {double_keys}. This is not allowed."
@@ -195,6 +195,7 @@ def convert_input_to_namelist_entry(key, val, mapping=None):
                 item_val = itemval.pop()
             else:
                 idx_string = f"{idx + 1}"
+                item_val = itemval
 
             list_of_strings.append(f"  {key}({idx_string}) = {conv_to_fortran(item_val)}\n")
 

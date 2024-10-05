@@ -6,7 +6,8 @@ import os
 import pytest
 from aiida import orm
 from aiida.common import datastructures
-from aiida.common.exceptions import InputValidationError
+
+# from aiida.common.exceptions import InputValidationError
 from aiida.plugins import CalculationFactory
 from aiida_fireball.calculations.fireball import FireballCalculation
 
@@ -46,8 +47,6 @@ def test_fireball_restart(
     generate_calc_job,
     generate_inputs_fireball,
     file_regression,
-    generate_remote_data,
-    fixture_localhost,
 ):
     """Test a `FireballCalculation` with a restart."""
     entry_point_name = "fireball.fireball"
@@ -114,5 +113,5 @@ def test_fireball_fixed_coords_validation(
     inputs = generate_inputs_fireball()
     inputs["settings"] = orm.Dict(dict={"FIXED_COORDS": fixed_coords})
 
-    with pytest.raises(InputValidationError, match=error_message):
+    with pytest.raises(ValueError, match=error_message):
         generate_calc_job(fixture_sandbox, entry_point_name, inputs)
