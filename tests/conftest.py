@@ -2,7 +2,16 @@ import os
 
 import pytest
 
-pytest_plugins = ["aiida.tools.pytest_fixtures"]
+# pytest_plugins = ["aiida.tools.pytest_fixtures"]
+pytest_plugins = ["aiida.manage.tests.pytest_fixtures"]  # pylint: disable=invalid-name
+
+
+@pytest.fixture(autouse=True)
+def add_entry_point(entry_points):
+    """Add the `FireballCalculation` entry point for the whole test session."""
+    from aiida_fireball.calculations.fireball import FireballCalculation
+
+    entry_points.add(FireballCalculation, "aiida.calculations:fireball.fireball")
 
 
 @pytest.fixture(scope="session")
@@ -265,3 +274,78 @@ def generate_remote_data():
         return remote
 
     return _generate_remote_data
+
+
+@pytest.fixture
+def generate_calc_job():
+    """Fixture to construct a new `CalcJob` instance and call `prepare_for_submission` for testing `CalcJob` classes.
+
+    The fixture will return the `CalcInfo` returned by `prepare_for_submission` and the temporary folder that was passed
+    to it, into which the raw input files will have been written.
+    """
+
+    def _generate_calc_job(folder, entry_point_name, inputs=None):
+        """Fixture to generate a mock `CalcInfo` for testing calculation jobs."""
+        from aiida.engine.utils import instantiate_process
+        from aiida.manage.manager import get_manager
+        from aiida.plugins import CalculationFactory
+
+        manager = get_manager()
+        runner = manager.get_runner()
+
+        process_class = CalculationFactory(entry_point_name)
+        process = instantiate_process(runner, process_class, **inputs)
+
+        calc_info = process.prepare_for_submission(folder)
+
+        return calc_info
+
+    return _generate_calc_job
+
+
+@pytest.fixture
+def generate_inputs_fireball(
+    fixture_code, generate_structure, generate_kpoints_mesh, generate_remote_data, fixture_localhost
+):
+    """Generate default inputs for a `FireballCalculation."""
+
+    def _generate_inputs_fireball():
+        """Generate default inputs for a `FireballCalculation."""
+        from aiida.orm import Dict
+
+        parameters = Dict(
+            {
+                "OPTION": {
+                    "basisfile": "aiida.bas",
+                    "lvsfile": "aiida.lvs",
+                    "kptpreference": "aiida.kpts",
+                },
+                "OUTPUT": {
+                    "iwrtewf": 0,
+                    "iwrtdos": 0,
+                    "iwrtxyz": 1,
+                    "iwrteigen": 0,
+                    "iwrtefermi": 0,
+                    "iwrtcdcoefs": 0,
+                },
+            }
+        )
+        structure = generate_structure()
+        inputs = {
+            "code": fixture_code("quantumespresso.pw"),
+            "structure": structure,
+            "kpoints": generate_kpoints_mesh(2),
+            "parameters": parameters,
+            "fdata_remote": generate_remote_data(computer=fixture_localhost, remote_path="/path/to/fdata"),
+            "parent_folder": generate_remote_data(computer=fixture_localhost, remote_path="/path/to/parent"),
+            "metadata": {
+                "options": {
+                    "resources": {"num_machines": 1, "num_mpiprocs_per_machine": 1},
+                    "max_wallclock_seconds": 1800,
+                    "withmpi": False,
+                }
+            },
+        }
+        return inputs
+
+    return _generate_inputs_fireball

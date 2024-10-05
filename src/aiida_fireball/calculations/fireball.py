@@ -1,0 +1,215 @@
+import os
+
+import numpy
+from aiida.common.datastructures import CalcInfo, CodeInfo
+from aiida.common.folders import Folder
+from aiida.engine import CalcJob
+from aiida.orm import BandsData, Dict, KpointsData, RemoteData, StructureData, TrajectoryData
+
+from .utils import _uppercase_dict, convert_input_to_namelist_entry
+
+
+class FireballCalculation(CalcJob):
+    """AiiDA calculation plugin for Fireball executable fireball.x."""
+
+    _PREFIX = "aiida"
+    _DEFAULT_PARSER = "fireball.fireball"
+    _DEFAULT_INPUT_FILE = "aiida.in"
+    _DEFAULT_OUTPUT_FILE = "aiida.out"
+    _DEFAULT_BAS_FILE = "aiida.bas"
+    _DEFAULT_LVS_FILE = "aiida.lvs"
+    _DEFAULT_KPTS_FILE = "aiida.kpts"
+    _FDATA_SUBFOLDER = "./Fdata/"
+    _CRASH_FILE = "CRASH"
+    _OUTPUT_SUBFOLDER = "./out/"
+
+    # Name lists to print by calculation type
+    _automatic_namelists = {}
+
+    # Blocked keywords that are to be specified in the subclass
+    _blocked_keywords = {}
+
+    # Additional files that should always be retrieved for the specific plugin
+    _internal_retrieve_list = []
+
+    # In restarts, will copy not symlink
+    _default_symlink_usage = False
+
+    # In restarts, it will copy from the parent the following
+    _restart_copy_from = os.path.join(_OUTPUT_SUBFOLDER, "*")
+
+    # In restarts, it will copy the previous folder in the following one
+    _restart_copy_to = _OUTPUT_SUBFOLDER
+
+    @classmethod
+    def define(cls, spec):
+        """Define inputs and outputs of the calculation."""
+        super().define(spec)
+
+        spec.input("structure", valid_type=StructureData, help="The input structure.")
+        spec.input("parameters", valid_type=Dict, help="The input parameters.")
+        spec.input("kpoints", valid_type=KpointsData, help="The input kpoints.")
+        spec.input("fdata_remote", valid_type=RemoteData, help="Remote folder containing the Fdata files.")
+        spec.input("settings", valid_type=Dict, required=False, help="Additional input parameters.")
+        spec.input("metadata.options.parser_name", valid_type=str, default=cls._DEFAULT_PARSER)
+        spec.input("metadata.options.input_filename", valid_type=str, default=cls._DEFAULT_INPUT_FILE)
+        spec.input("metadata.options.output_filename", valid_type=str, default=cls._DEFAULT_OUTPUT_FILE)
+        spec.input("metadata.options.withmpi", valid_type=bool, default=True)
+        spec.input(
+            "parent_folder", valid_type=RemoteData, required=False, help="The parent remote folder to restart from."
+        )
+        spec.inputs["metadata"]["options"]["resources"].default = lambda: {
+            "num_machines": 1,
+            "num_mpiprocs_per_machine": 1,
+        }
+        spec.inputs.validator = cls.validate_inputs
+
+        spec.output("output_parameters", valid_type=Dict, help="The output parameters.")
+        spec.output(
+            "output_structure",
+            valid_type=StructureData,
+            required=False,
+            help="The `output_structure` output node of the successful calculation if present.",
+        )
+        spec.output("output_trajectory", valid_type=TrajectoryData, required=False)
+        spec.output(
+            "output_band",
+            valid_type=BandsData,
+            required=False,
+            help="The `output_band` output node of the successful calculation if present.",
+        )
+        spec.default_output_node = "output_parameters"
+
+        spec.exit_code(
+            302,
+            "ERROR_OUTPUT_STDOUT_MISSING",
+            message="The retrieved folder did not contain the required stdout output file.",
+        )
+        spec.exit_code(310, "ERROR_OUTPUT_STDOUT_READ", message="The stdout output file could not be read.")
+        spec.exit_code(311, "ERROR_OUTPUT_STDOUT_PARSE", message="The stdout output file could not be parsed.")
+        spec.exit_code(
+            312,
+            "ERROR_OUTPUT_STDOUT_INCOMPLETE",
+            message="The stdout output file was incomplete probably because the calculation got interrupted.",
+        )
+        spec.exit_code(
+            400, "ERROR_OUT_OF_WALLTIME", message="The calculation stopped prematurely because it ran out of walltime."
+        )
+
+    @classmethod
+    def validate_inputs(cls, value, port_namespace):  # pylint: disable=too-many-branches
+        """Validate the entire inputs namespace."""
+
+        # Wrapping processes may choose to exclude certain input ports in which case we can't validate. If the ports
+        # have been excluded, and so are no longer part of the ``port_namespace``, skip the validation.
+        if any(key not in port_namespace for key in ("fdata_remote", "structure")):
+            return
+
+        # At this point, both ports are part of the namespace, and both are required so return an error message if any
+        # of the two is missing.
+        for key in ("fdata_remote", "structure"):
+            if key not in value:
+                return f"required value was not provided for the `{key}` namespace."
+
+        if "settings" in value:
+            settings = _uppercase_dict(value["settings"].get_dict(), dict_name="settings")
+
+            # Validate the FIXED_COORDS setting
+            fixed_coords = settings.get("FIXED_COORDS", None)
+
+            if fixed_coords is not None:
+                fixed_coords = numpy.array(fixed_coords)
+
+                if len(fixed_coords.shape) != 2 or fixed_coords.shape[1] != 3:
+                    return "The `fixed_coords` setting must be a list of lists with length 3."
+
+                if fixed_coords.dtype != bool:
+                    return "All elements in the `fixed_coords` setting lists must be either `True` or `False`."
+
+                if "structure" in value:
+                    nsites = len(value["structure"].sites)
+
+                    if len(fixed_coords) != nsites:
+                        return f"Input structure has {nsites} sites, but fixed_coords has length {len(fixed_coords)}"
+
+    def prepare_for_submission(self, folder: Folder) -> CalcInfo:
+        """Prepare the calculation job for submission by generating input files and parameters."""
+        if "settings" in self.inputs:
+            settings = _uppercase_dict(self.inputs.settings.get_dict(), dict_name="settings")
+        else:
+            settings = {}
+
+        local_copy_list = []
+        remote_copy_list = []
+        remote_symlink_list = []
+
+        # Create output subfolder
+        folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
+
+        # Symlink the Fdata folder
+        remote_symlink_list.append(
+            (self.inputs.fdata_remote.computer.uuid, self.inputs.fdata_remote.get_remote_path(), self._FDATA_SUBFOLDER)
+        )
+
+        # Write the input file
+        input_filecontent = self._generate_inputdata(self.inputs.parameters.get_dict())
+
+        with folder.open(self.metadata.options.input_filename, "w") as handle:
+            handle.write(input_filecontent)
+
+        # operations for restart
+        symlink = settings.pop("PARENT_FOLDER_SYMLINK", self._default_symlink_usage)  # a boolean
+        if symlink:
+            if "parent_folder" in self.inputs:
+                # I put the symlink to the old parent ./out folder
+                remote_symlink_list.append(
+                    (
+                        self.inputs.parent_folder.computer.uuid,
+                        os.path.join(self.inputs.parent_folder.get_remote_path(), self._restart_copy_from),
+                        self._restart_copy_to,
+                    )
+                )
+        elif "parent_folder" in self.inputs:
+            remote_copy_list.append(
+                (
+                    self.inputs.parent_folder.computer.uuid,
+                    os.path.join(self.inputs.parent_folder.get_remote_path(), self._restart_copy_from),
+                    self._restart_copy_to,
+                )
+            )
+
+        # Prepare the code info
+        codeinfo = CodeInfo()
+        codeinfo.code_uuid = self.inputs.code.uuid
+        codeinfo.cmdline_params = [self.inputs.metadata.options.input_filename]
+        codeinfo.stdout_name = self.inputs.metadata.options.output_filename
+
+        # Prepare the calculation info
+        calcinfo = CalcInfo()
+        calcinfo.uuid = self.uuid
+        calcinfo.codes_info = [codeinfo]
+
+        calcinfo.local_copy_list = local_copy_list
+        calcinfo.remote_copy_list = remote_copy_list
+        calcinfo.remote_symlink_list = remote_symlink_list
+
+        # Retrieve by default the output file and the xml file
+        calcinfo.retrieve_list = []
+        calcinfo.retrieve_list.append(self.metadata.options.output_filename)
+        calcinfo.retrieve_list.append(self._CRASH_FILE)
+        calcinfo.retrieve_list += settings.pop("ADDITIONAL_RETRIEVE_LIST", [])
+        calcinfo.retrieve_list += self._internal_retrieve_list
+
+        return calcinfo
+
+    @classmethod
+    def _generate_inputdata(cls, parameters):
+        """Generate the input data for the calculation."""
+        file_lines = []
+        for namelist_name, namelist in parameters.items():
+            file_lines.append(f"&{namelist_name}")
+            for key, value in sorted(namelist.items()):
+                file_lines.append(convert_input_to_namelist_entry(key, value)[:-1])
+            file_lines.append("&END")
+
+        return "\n".join(file_lines) + "\n"
