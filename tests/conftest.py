@@ -233,6 +233,22 @@ def generate_kpoints_mesh():
     return _generate_kpoints_mesh
 
 
+@pytest.fixture
+def generate_kpoints():
+    """Return a `KpointsData` node."""
+
+    def _generate_kpoints(kpts):
+        """Return a `KpointsData` with given kpoints."""
+        from aiida.orm import KpointsData
+
+        kpoints = KpointsData()
+        kpoints.set_kpoints(kpts)
+
+        return kpoints
+
+    return _generate_kpoints
+
+
 @pytest.fixture(scope="session")
 def generate_parser():
     """Fixture to load a parser class for testing parsers."""

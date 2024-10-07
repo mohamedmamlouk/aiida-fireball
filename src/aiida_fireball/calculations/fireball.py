@@ -1,3 +1,5 @@
+"""Fireball calculation plugin for AiiDA."""
+
 import os
 
 import numpy
@@ -6,7 +8,7 @@ from aiida.common.folders import Folder
 from aiida.engine import CalcJob
 from aiida.orm import BandsData, Dict, KpointsData, RemoteData, StructureData, TrajectoryData
 
-from .utils import _uppercase_dict, convert_input_to_namelist_entry
+from .utils import _uppercase_dict, conv_to_fortran, convert_input_to_namelist_entry
 
 
 class FireballCalculation(CalcJob):
@@ -97,19 +99,19 @@ class FireballCalculation(CalcJob):
         )
 
     @classmethod
-    def validate_inputs(cls, value, port_namespace):  # pylint: disable=too-many-branches
+    def validate_inputs(cls, value, _):  # pylint: disable=too-many-branches
         """Validate the entire inputs namespace."""
 
         # Wrapping processes may choose to exclude certain input ports in which case we can't validate. If the ports
         # have been excluded, and so are no longer part of the ``port_namespace``, skip the validation.
-        if any(key not in port_namespace for key in ("fdata_remote", "structure")):
-            return
+        # if any(key not in port_namespace for key in ("fdata_remote", "structure")):
+        #     return
 
         # At this point, both ports are part of the namespace, and both are required so return an error message if any
         # of the two is missing.
-        for key in ("fdata_remote", "structure"):
-            if key not in value:
-                return f"required value was not provided for the `{key}` namespace."
+        # for key in ("fdata_remote", "structure"):
+        #     if key not in value:
+        #         return f"required value was not provided for the `{key}` namespace."
 
         if "settings" in value:
             settings = _uppercase_dict(value["settings"].get_dict(), dict_name="settings")
@@ -152,10 +154,28 @@ class FireballCalculation(CalcJob):
         )
 
         # Write the input file
-        input_filecontent = self._generate_inputdata(self.inputs.parameters.get_dict())
+        input_filecontent = self.generate_input(self.inputs.parameters.get_dict())
 
         with folder.open(self.metadata.options.input_filename, "w") as handle:
             handle.write(input_filecontent)
+
+        # Write the bas file
+        bas_filecontent = self.generate_bas(self.inputs.structure)
+
+        with folder.open(self._DEFAULT_BAS_FILE, "w") as handle:
+            handle.write(bas_filecontent)
+
+        # Write the lvs file
+        lvs_filecontent = self.generate_lvs(self.inputs.structure)
+
+        with folder.open(self._DEFAULT_LVS_FILE, "w") as handle:
+            handle.write(lvs_filecontent)
+
+        # Write the kpts file
+        kpts_filecontent = self.generate_kpts(self.inputs.kpoints, self.inputs.structure)
+
+        with folder.open(self._DEFAULT_KPTS_FILE, "w") as handle:
+            handle.write(kpts_filecontent)
 
         # operations for restart
         symlink = settings.pop("PARENT_FOLDER_SYMLINK", self._default_symlink_usage)  # a boolean
@@ -203,7 +223,7 @@ class FireballCalculation(CalcJob):
         return calcinfo
 
     @classmethod
-    def _generate_inputdata(cls, parameters):
+    def generate_input(cls, parameters):
         """Generate the input data for the calculation."""
         file_lines = []
         for namelist_name, namelist in parameters.items():
@@ -211,5 +231,54 @@ class FireballCalculation(CalcJob):
             for key, value in sorted(namelist.items()):
                 file_lines.append(convert_input_to_namelist_entry(key, value)[:-1])
             file_lines.append("&END")
+
+        return "\n".join(file_lines) + "\n"
+
+    @classmethod
+    def generate_bas(cls, structure: StructureData):
+        """Generate the bas file for the calculation (atomic positions)."""
+        ase_structure = structure.get_ase()
+        file_lines = []
+        file_lines.append(f"\t{len(ase_structure):3d}")
+
+        for atom in ase_structure:
+            file_lines.append(
+                f"{atom.number:3d} \
+{conv_to_fortran(atom.position[0])} \
+{conv_to_fortran(atom.position[1])} \
+{conv_to_fortran(atom.position[2])}"
+            )
+
+        return "\n".join(file_lines) + "\n"
+
+    @classmethod
+    def generate_lvs(cls, structure: StructureData):
+        """Generate the lvs file for the calculation (lattice vectors)."""
+        ase_structure = structure.get_ase()
+        file_lines = []
+        for vector in ase_structure.cell:
+            file_lines.append(f"{conv_to_fortran(vector[0])} {conv_to_fortran(vector[1])} {conv_to_fortran(vector[2])}")
+
+        return "\n".join(file_lines) + "\n"
+
+    @classmethod
+    def generate_kpts(cls, kpoints: KpointsData, structure: StructureData):
+        """Generate the kpts file for the calculation (write list of cartesian k-points)."""
+        file_lines = []
+        temp_kpoints = KpointsData()
+        temp_kpoints.set_cell_from_structure(structure)
+        if "kpoints" in kpoints.get_arraynames():
+            scaled_kpoints = kpoints.get_kpoints()
+        else:
+            scaled_kpoints = kpoints.get_kpoints_mesh(print_list=True)
+        temp_kpoints.set_kpoints(
+            scaled_kpoints, cartesian=False, weights=[1.0 / len(scaled_kpoints)] * len(scaled_kpoints)
+        )
+        cartesian_kpoints, weights = temp_kpoints.get_kpoints(cartesian=True, also_weights=True)
+        file_lines.append(f"\t{len(cartesian_kpoints):5d}")
+        for kpt, weight in zip(cartesian_kpoints, weights):
+            file_lines.append(
+                f"{conv_to_fortran(kpt[0])} {conv_to_fortran(kpt[1])} {conv_to_fortran(kpt[2])}\t{weight:.10f}"
+            )
 
         return "\n".join(file_lines) + "\n"

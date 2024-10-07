@@ -1,4 +1,5 @@
-# test_utils.py
+"""Tests for the utility functions in `aiida_fireball.calculations.utils`."""
+
 import pytest
 from aiida.common import exceptions
 from aiida_fireball.calculations.utils import (
@@ -56,31 +57,10 @@ def test_conv_to_fortran_invalid_type():
         conv_to_fortran([1, 2, 3])
 
 
-def test_convert_input_to_namelist_entry_single_value():
-    assert convert_input_to_namelist_entry("key", 42) == "  key = 42\n"
-
-
-def test_convert_input_to_namelist_entry_list():
-    assert convert_input_to_namelist_entry("key", [1, 2, 3]) == "  key(1) = 1\n  key(2) = 2\n  key(3) = 3\n"
-
-
-def test_convert_input_to_namelist_entry_double_nested_list():
-    val = [[1, 1, 3, 3.5], [2, 1, 1, 2.8]]
-    expected_output = f"  key(1,1,3) = {conv_to_fortran(3.5)}\n  key(2,1,1) = {conv_to_fortran(2.8)}\n"
-    assert convert_input_to_namelist_entry("key", val) == expected_output
-
-
 def test_convert_input_to_namelist_entry_double_nested_list_with_mapping():
     val = [[2, "Ni", 3.5], [2, "Fe", 7.4]]
     mapping = {"Ni": 1, "Fe": 3}
     expected_output = f"  key(2,1) = {conv_to_fortran(3.5)}\n  key(2,3) = {conv_to_fortran(7.4)}\n"
-    assert convert_input_to_namelist_entry("key", val, mapping) == expected_output
-
-
-def test_convert_input_to_namelist_entry_dict():
-    val = {"Co": 3.5, "O": 7.4}
-    mapping = {"Co": 1, "O": 3}
-    expected_output = f"  key(1) = {conv_to_fortran(3.5)}\n  key(3) = {conv_to_fortran(7.4)}\n"
     assert convert_input_to_namelist_entry("key", val, mapping) == expected_output
 
 
@@ -99,5 +79,63 @@ def test_convert_input_to_namelist_entry_double_nested_list_invalid_value():
 def test_convert_input_to_namelist_entry_double_nested_list_no_mapping():
     val = [[2, "Ni", 3.5], [2, "Unknown", 7.4]]
     mapping = {"Ni": 1}
+    with pytest.raises(ValueError):
+        convert_input_to_namelist_entry("key", val, mapping)
+
+
+def test_convert_input_to_namelist_entry_single_value():
+    assert convert_input_to_namelist_entry("key", 42) == "  key = 42\n"
+    assert convert_input_to_namelist_entry("key", 3.14) == "  key =   3.1400000000d+00\n"
+    assert convert_input_to_namelist_entry("key", True) == "  key = .true.\n"
+    assert convert_input_to_namelist_entry("key", "value") == "  key = 'value'\n"
+
+
+def test_convert_input_to_namelist_entry_list():
+    assert convert_input_to_namelist_entry("key", [1, 2, 3]) == "  key(1) = 1\n  key(2) = 2\n  key(3) = 3\n"
+    assert (
+        convert_input_to_namelist_entry("key", [3.14, 2.71])
+        == "  key(1) =   3.1400000000d+00\n  key(2) =   2.7100000000d+00\n"
+    )
+    assert convert_input_to_namelist_entry("key", [True, False]) == "  key(1) = .true.\n  key(2) = .false.\n"
+    assert convert_input_to_namelist_entry("key", ["a", "b"]) == "  key(1) = 'a'\n  key(2) = 'b'\n"
+
+
+def test_convert_input_to_namelist_entry_double_nested_list():
+    val = [[1, 1, 3, 3.5], [2, 1, 1, 2.8]]
+    expected_output = "  key(1,1,3) =   3.5000000000d+00\n  key(2,1,1) =   2.8000000000d+00\n"
+    assert convert_input_to_namelist_entry("key", val) == expected_output
+
+    val = [[2, "Ni", 3.5], [2, "Fe", 7.4]]
+    mapping = {"Ni": 1, "Fe": 3}
+    expected_output = "  key(2,1) =   3.5000000000d+00\n  key(2,3) =   7.4000000000d+00\n"
+    assert convert_input_to_namelist_entry("key", val, mapping) == expected_output
+
+
+def test_convert_input_to_namelist_entry_dict():
+    val = {"Co": 3.5, "O": 7.4}
+    mapping = {"Co": 1, "O": 3}
+    expected_output = "  key(1) =   3.5000000000d+00\n  key(3) =   7.4000000000d+00\n"
+    assert convert_input_to_namelist_entry("key", val, mapping) == expected_output
+
+
+def test_convert_input_to_namelist_entry_invalid_inputs():
+    with pytest.raises(ValueError):
+        convert_input_to_namelist_entry("key", {"Co": 3.5, "O": 7.4})
+
+    val = [[1, 1, 3, 3.5], [2, 1, "invalid", 2.8]]
+    with pytest.raises(ValueError):
+        convert_input_to_namelist_entry("key", val)
+
+    val = [[2, 1, 3.5], [2, None, 7.4]]
+    with pytest.raises(ValueError):
+        convert_input_to_namelist_entry("key", val)
+
+    val = [[2, "Ni", 3.5], [2, "Unknown", 7.4]]
+    mapping = {"Ni": 1}
+    with pytest.raises(ValueError):
+        convert_input_to_namelist_entry("key", val, mapping)
+
+    val = {"Co": 3.5, "O": 7.4}
+    mapping = {"Co": 1}
     with pytest.raises(ValueError):
         convert_input_to_namelist_entry("key", val, mapping)

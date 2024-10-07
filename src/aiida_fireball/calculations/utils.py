@@ -1,3 +1,5 @@
+"""Utility functions for the Fireball calculations."""
+
 import numbers
 
 from aiida.common import exceptions
