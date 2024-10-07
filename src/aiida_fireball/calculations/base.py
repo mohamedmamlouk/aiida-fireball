@@ -1,4 +1,4 @@
-"""Fireball calculation plugin for AiiDA."""
+"""Base `CalcJob` for Fireball calculations"""
 
 import os
 
@@ -6,16 +6,15 @@ import numpy
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.folders import Folder
 from aiida.engine import CalcJob
-from aiida.orm import BandsData, Dict, KpointsData, RemoteData, StructureData, TrajectoryData
+from aiida.orm import Dict, KpointsData, RemoteData, StructureData
 
 from .utils import _uppercase_dict, conv_to_fortran, convert_input_to_namelist_entry
 
 
-class FireballCalculation(CalcJob):
-    """AiiDA calculation plugin for Fireball executable fireball.x."""
+class BaseFireballCalculation(CalcJob):
+    """Base `CalcJob` for Fireball calculations"""
 
     _PREFIX = "aiida"
-    _DEFAULT_PARSER = "fireball.fireball"
     _DEFAULT_INPUT_FILE = "aiida.in"
     _DEFAULT_OUTPUT_FILE = "aiida.out"
     _DEFAULT_BAS_FILE = "aiida.bas"
@@ -53,7 +52,6 @@ class FireballCalculation(CalcJob):
         spec.input("kpoints", valid_type=KpointsData, help="The input kpoints.")
         spec.input("fdata_remote", valid_type=RemoteData, help="Remote folder containing the Fdata files.")
         spec.input("settings", valid_type=Dict, required=False, help="Additional input parameters.")
-        spec.input("metadata.options.parser_name", valid_type=str, default=cls._DEFAULT_PARSER)
         spec.input("metadata.options.input_filename", valid_type=str, default=cls._DEFAULT_INPUT_FILE)
         spec.input("metadata.options.output_filename", valid_type=str, default=cls._DEFAULT_OUTPUT_FILE)
         spec.input("metadata.options.withmpi", valid_type=bool, default=True)
@@ -65,22 +63,6 @@ class FireballCalculation(CalcJob):
             "num_mpiprocs_per_machine": 1,
         }
         spec.inputs.validator = cls.validate_inputs
-
-        spec.output("output_parameters", valid_type=Dict, help="The output parameters.")
-        spec.output(
-            "output_structure",
-            valid_type=StructureData,
-            required=False,
-            help="The `output_structure` output node of the successful calculation if present.",
-        )
-        spec.output("output_trajectory", valid_type=TrajectoryData, required=False)
-        spec.output(
-            "output_band",
-            valid_type=BandsData,
-            required=False,
-            help="The `output_band` output node of the successful calculation if present.",
-        )
-        spec.default_output_node = "output_parameters"
 
         spec.exit_code(
             302,

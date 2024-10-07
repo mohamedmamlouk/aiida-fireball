@@ -6,14 +6,6 @@ import pytest
 pytest_plugins = ["aiida.manage.tests.pytest_fixtures"]  # pylint: disable=invalid-name
 
 
-@pytest.fixture(autouse=True)
-def add_entry_point(entry_points):
-    """Add the `FireballCalculation` entry point for the whole test session."""
-    from aiida_fireball.calculations.fireball import FireballCalculation
-
-    entry_points.add(FireballCalculation, "aiida.calculations:fireball.fireball")
-
-
 @pytest.fixture(scope="session")
 def filepath_tests():
     """Return the absolute filepath of the `tests` folder.
@@ -320,13 +312,13 @@ def generate_calc_job():
 
 
 @pytest.fixture
-def generate_inputs_fireball(
+def generate_inputs_base_fireball(
     fixture_code, generate_structure, generate_kpoints_mesh, generate_remote_data, fixture_localhost
 ):
-    """Generate default inputs for a `FireballCalculation."""
+    """Generate default inputs for a `BaseFireballCalculation."""
 
-    def _generate_inputs_fireball():
-        """Generate default inputs for a `FireballCalculation."""
+    def _generate_inputs_base_fireball():
+        """Generate default inputs for a `BaseFireballCalculation."""
         from aiida.orm import Dict
 
         parameters = Dict(
@@ -364,4 +356,4 @@ def generate_inputs_fireball(
         }
         return inputs
 
-    return _generate_inputs_fireball
+    return _generate_inputs_base_fireball

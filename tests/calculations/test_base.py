@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for the `FireballCalculation` class."""
+"""Tests for the `BaseFireballCalculation` class."""
 
 import os
 
@@ -10,13 +10,21 @@ from aiida.common import datastructures
 
 # from aiida.common.exceptions import InputValidationError
 from aiida.plugins import CalculationFactory
-from aiida_fireball.calculations.fireball import FireballCalculation
+from aiida_fireball.calculations.base import BaseFireballCalculation
+
+
+@pytest.fixture(autouse=True)
+def add_base_fireball_entry_point(entry_points):
+    """Add the `BaseFireballCalculation` entry point in function scope."""
+    from aiida_fireball.calculations.base import BaseFireballCalculation
+
+    entry_points.add(BaseFireballCalculation, "aiida.calculations:fireball.base")
 
 
 def test_calculation():
-    """Test the `FireballCalculation` load."""
-    calc = CalculationFactory("fireball.fireball")
-    assert issubclass(calc, FireballCalculation)
+    """Test the `BaseFireballCalculation` load."""
+    calc = CalculationFactory("fireball.base")
+    assert issubclass(calc, BaseFireballCalculation)
 
 
 @pytest.mark.parametrize(
@@ -30,17 +38,17 @@ def test_calculation():
 def test_fireball_default(
     fixture_sandbox,
     generate_calc_job,
-    generate_inputs_fireball,
+    generate_inputs_base_fireball,
     file_regression,
     symlink_restart: bool,
     generate_kpoints_mesh,
     generate_kpoints,
     mesh: bool,
 ):
-    """Test a default `FireballCalculation`."""
-    entry_point_name = "fireball.fireball"
+    """Test a default `BaseFireballCalculation`."""
+    entry_point_name = "fireball.base"
 
-    inputs = generate_inputs_fireball()
+    inputs = generate_inputs_base_fireball()
     if symlink_restart:
         inputs["settings"] = orm.Dict(dict={"PARENT_FOLDER_SYMLINK": symlink_restart})
     if mesh:
@@ -92,11 +100,11 @@ def test_fireball_default(
     file_regression.check(kpts_written, encoding="utf-8", extension=".kpts")
 
 
-def test_fireball_fixed_coords(fixture_sandbox, generate_calc_job, generate_inputs_fireball, file_regression):
-    """Test a `FireballCalculation` where the `fixed_coords` setting was provided."""
-    entry_point_name = "fireball.fireball"
+def test_fireball_fixed_coords(fixture_sandbox, generate_calc_job, generate_inputs_base_fireball, file_regression):
+    """Test a `BaseFireballCalculation` where the `fixed_coords` setting was provided."""
+    entry_point_name = "fireball.base"
 
-    inputs = generate_inputs_fireball()
+    inputs = generate_inputs_base_fireball()
     inputs["settings"] = orm.Dict(dict={"FIXED_COORDS": [[True, True, False], [False, True, False]]})
     generate_calc_job(fixture_sandbox, entry_point_name, inputs)
 
@@ -118,23 +126,23 @@ def test_fireball_fixed_coords(fixture_sandbox, generate_calc_job, generate_inpu
     ],
 )
 def test_fireball_fixed_coords_validation(
-    fixture_sandbox, generate_calc_job, generate_inputs_fireball, fixed_coords, error_message
+    fixture_sandbox, generate_calc_job, generate_inputs_base_fireball, fixed_coords, error_message
 ):
     """Test the validation for the `fixed_coords` setting."""
-    entry_point_name = "fireball.fireball"
+    entry_point_name = "fireball.base"
 
-    inputs = generate_inputs_fireball()
+    inputs = generate_inputs_base_fireball()
     inputs["settings"] = orm.Dict(dict={"FIXED_COORDS": fixed_coords})
 
     with pytest.raises(ValueError, match=error_message):
         generate_calc_job(fixture_sandbox, entry_point_name, inputs)
 
 
-def test_fireball_missing_inputs(fixture_sandbox, generate_calc_job, generate_inputs_fireball):
-    """Test a `FireballCalculation` with missing required inputs."""
-    entry_point_name = "fireball.fireball"
+def test_fireball_missing_inputs(fixture_sandbox, generate_calc_job, generate_inputs_base_fireball):
+    """Test a `BaseFireballCalculation` with missing required inputs."""
+    entry_point_name = "fireball.base"
 
-    inputs = generate_inputs_fireball()
+    inputs = generate_inputs_base_fireball()
     del inputs["fdata_remote"]
     error_message = "Error occurred validating port 'inputs.fdata_remote': "
     error_message += "required value was not provided for 'fdata_remote'"

@@ -65,7 +65,6 @@ Source = "https://github.com/ValkScripter/aiida-fireball"
 [project.entry-points."aiida.data"]
 
 [project.entry-points."aiida.calculations"]
-"fireball" = "aiida_fireball.calculations.fireball:FireballCalculation"
 
 [project.entry-points."aiida.parsers"]
 
