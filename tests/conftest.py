@@ -1,3 +1,6 @@
+"""Pytest fixtures for the `aiida-fireball` package."""
+
+# pylint: disable=redefined-outer-name,too-many-statements
 import os
 
 import pytest

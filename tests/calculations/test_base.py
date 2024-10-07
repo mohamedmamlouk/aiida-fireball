@@ -16,8 +16,6 @@ from aiida_fireball.calculations.base import BaseFireballCalculation
 @pytest.fixture(autouse=True)
 def add_base_fireball_entry_point(entry_points):
     """Add the `BaseFireballCalculation` entry point in function scope."""
-    from aiida_fireball.calculations.base import BaseFireballCalculation
-
     entry_points.add(BaseFireballCalculation, "aiida.calculations:fireball.base")
 
 
