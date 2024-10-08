@@ -326,11 +326,11 @@ def generate_inputs_base_fireball(
 
         parameters = Dict(
             {
-                "OPTION": {
-                    "basisfile": "aiida.bas",
-                    "lvsfile": "aiida.lvs",
-                    "kptpreference": "aiida.kpts",
-                },
+                # "OPTION": {
+                #     "basisfile": "aiida.bas",
+                #     "lvsfile": "aiida.lvs",
+                #     "kptpreference": "aiida.kpts",
+                # },
                 "OUTPUT": {
                     "iwrtewf": 0,
                     "iwrtdos": 0,

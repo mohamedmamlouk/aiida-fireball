@@ -8,7 +8,7 @@ from aiida.common.folders import Folder
 from aiida.engine import CalcJob
 from aiida.orm import Dict, KpointsData, RemoteData, StructureData
 
-from .utils import _uppercase_dict, conv_to_fortran, convert_input_to_namelist_entry
+from .utils import _lowercase_dict, _uppercase_dict, conv_to_fortran, convert_input_to_namelist_entry
 
 
 class BaseFireballCalculation(CalcJob):
@@ -22,13 +22,19 @@ class BaseFireballCalculation(CalcJob):
     _DEFAULT_KPTS_FILE = "aiida.kpts"
     _FDATA_SUBFOLDER = "./Fdata/"
     _CRASH_FILE = "CRASH"
-    _OUTPUT_SUBFOLDER = "./out/"
 
     # Name lists to print by calculation type
     _automatic_namelists = {}
 
-    # Blocked keywords that are to be specified in the subclass
-    _blocked_keywords = {}
+    # Blocked keywords that are to be specified in the subclass:
+    _blocked_keywords = {
+        "OPTION": {
+            "basisfile": _DEFAULT_BAS_FILE,
+            "lvsfile": _DEFAULT_LVS_FILE,
+            "kptpreference": _DEFAULT_KPTS_FILE,
+            "verbosity": 3,
+        }
+    }
 
     # Additional files that should always be retrieved for the specific plugin
     _internal_retrieve_list = []
@@ -36,11 +42,11 @@ class BaseFireballCalculation(CalcJob):
     # In restarts, will copy not symlink
     _default_symlink_usage = False
 
-    # In restarts, it will copy from the parent the following
-    _restart_copy_from = os.path.join(_OUTPUT_SUBFOLDER, "*")
+    # In restarts, it will copy the following files from the parent folder
+    _restart_files_list = ["CHARGES", "*restart*"]
 
     # In restarts, it will copy the previous folder in the following one
-    _restart_copy_to = _OUTPUT_SUBFOLDER
+    _restart_copy_to = "./"
 
     @classmethod
     def define(cls, spec):
@@ -118,6 +124,7 @@ class BaseFireballCalculation(CalcJob):
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation job for submission by generating input files and parameters."""
+
         if "settings" in self.inputs:
             settings = _uppercase_dict(self.inputs.settings.get_dict(), dict_name="settings")
         else:
@@ -127,12 +134,16 @@ class BaseFireballCalculation(CalcJob):
         remote_copy_list = []
         remote_symlink_list = []
 
-        # Create output subfolder
-        folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
+        # Create Fdata subfolder
+        folder.get_subfolder(self._FDATA_SUBFOLDER, create=True)
 
-        # Symlink the Fdata folder
+        # Symlink all files in the Fdata remote folder
         remote_symlink_list.append(
-            (self.inputs.fdata_remote.computer.uuid, self.inputs.fdata_remote.get_remote_path(), self._FDATA_SUBFOLDER)
+            (
+                self.inputs.fdata_remote.computer.uuid,
+                os.path.join(self.inputs.fdata_remote.get_remote_path(), "*"),
+                self._FDATA_SUBFOLDER,
+            )
         )
 
         # Write the input file
@@ -159,26 +170,37 @@ class BaseFireballCalculation(CalcJob):
         with folder.open(self._DEFAULT_KPTS_FILE, "w") as handle:
             handle.write(kpts_filecontent)
 
+        # Write the constraints file if the setting is provided
+        if "FIXED_COORDS" in settings:
+            fixed_coords = settings.pop("FIXED_COORDS", None)
+            if fixed_coords is not None:
+                fixed_coords = numpy.array(fixed_coords)
+                constraints_filecontent = self.generate_constraints(self.inputs.structure, fixed_coords)
+
+                with folder.open("FRAGMENTS", "w") as handle:
+                    handle.write(constraints_filecontent)
+
         # operations for restart
         symlink = settings.pop("PARENT_FOLDER_SYMLINK", self._default_symlink_usage)  # a boolean
         if symlink:
             if "parent_folder" in self.inputs:
-                # I put the symlink to the old parent ./out folder
-                remote_symlink_list.append(
+                for file_name in self._restart_files_list:
+                    remote_symlink_list.append(
+                        (
+                            self.inputs.parent_folder.computer.uuid,
+                            os.path.join(self.inputs.parent_folder.get_remote_path(), file_name),
+                            self._restart_copy_to,
+                        )
+                    )
+        elif "parent_folder" in self.inputs:
+            for file_name in self._restart_files_list:
+                remote_copy_list.append(
                     (
                         self.inputs.parent_folder.computer.uuid,
-                        os.path.join(self.inputs.parent_folder.get_remote_path(), self._restart_copy_from),
+                        os.path.join(self.inputs.parent_folder.get_remote_path(), file_name),
                         self._restart_copy_to,
                     )
                 )
-        elif "parent_folder" in self.inputs:
-            remote_copy_list.append(
-                (
-                    self.inputs.parent_folder.computer.uuid,
-                    os.path.join(self.inputs.parent_folder.get_remote_path(), self._restart_copy_from),
-                    self._restart_copy_to,
-                )
-            )
 
         # Prepare the code info
         codeinfo = CodeInfo()
@@ -195,7 +217,7 @@ class BaseFireballCalculation(CalcJob):
         calcinfo.remote_copy_list = remote_copy_list
         calcinfo.remote_symlink_list = remote_symlink_list
 
-        # Retrieve by default the output file and the xml file
+        # Retrieve by default the output file and any additional files specified in the settings
         calcinfo.retrieve_list = []
         calcinfo.retrieve_list.append(self.metadata.options.output_filename)
         calcinfo.retrieve_list.append(self._CRASH_FILE)
@@ -208,7 +230,29 @@ class BaseFireballCalculation(CalcJob):
     def generate_input(cls, parameters):
         """Generate the input data for the calculation."""
         file_lines = []
-        for namelist_name, namelist in parameters.items():
+
+        input_params = _uppercase_dict(parameters, dict_name="parameters")
+        input_params = {k: _lowercase_dict(v, dict_name=k) for k, v in input_params.items()}
+
+        blocked_keywords = _uppercase_dict(cls._blocked_keywords, dict_name="blocked_keywords")
+        blocked_keywords = {k: _lowercase_dict(v, dict_name=k) for k, v in blocked_keywords.items()}
+
+        # Check if there are blocked keywords in the input parameters
+        for namelist_name, namelist in blocked_keywords.items():
+            for key, value in namelist.items():
+                if key in input_params.get(namelist_name, {}):
+                    raise ValueError(f"Cannot specify the '{key}' keyword in the '{namelist_name}' namelist.")
+
+        # Add keywords from the blocked keywords which have values that are not None to the input parameters
+        for namelist_name, namelist in blocked_keywords.items():
+            for key, value in namelist.items():
+                if value is not None:
+                    if namelist_name not in input_params:
+                        input_params[namelist_name] = {}
+                    input_params[namelist_name][key] = value
+
+        # Write the namelists
+        for namelist_name, namelist in sorted(input_params.items()):
             file_lines.append(f"&{namelist_name}")
             for key, value in sorted(namelist.items()):
                 file_lines.append(convert_input_to_namelist_entry(key, value)[:-1])
@@ -262,5 +306,18 @@ class BaseFireballCalculation(CalcJob):
             file_lines.append(
                 f"{conv_to_fortran(kpt[0])} {conv_to_fortran(kpt[1])} {conv_to_fortran(kpt[2])}\t{weight:.10f}"
             )
+
+        return "\n".join(file_lines) + "\n"
+
+    def generate_constraints(self, structure: StructureData, fixed_coords: numpy.ndarray):
+        """Generate the constraints file for the calculation."""
+        ase_structure = structure.get_ase()
+        file_lines = []
+        file_lines.append("0")
+        file_lines.append("1")
+        file_lines.append(f"{len(ase_structure):3d}")
+
+        for i, atom, fix in zip(range(len(ase_structure)), ase_structure, fixed_coords):
+            file_lines.append(f"{i+1:3d} {int(fix[0]):1d} {int(fix[1]):1d} {int(fix[2]):1d}")
 
         return "\n".join(file_lines) + "\n"

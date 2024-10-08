@@ -28,8 +28,8 @@ def test_calculation():
 @pytest.mark.parametrize(
     ["symlink_restart", "mesh"],
     [
-        (False, False),
         (True, False),
+        (False, False),
         (False, True),
     ],
 )
@@ -56,15 +56,24 @@ def test_fireball_default(
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
 
     cmdline_params = ["aiida.in"]
-    remote_symlink_list = [(inputs["fdata_remote"].computer.uuid, inputs["fdata_remote"].get_remote_path(), "./Fdata/")]
+    remote_symlink_list = [
+        (inputs["fdata_remote"].computer.uuid, os.path.join(inputs["fdata_remote"].get_remote_path(), "*"), "./Fdata/")
+    ]
 
     if symlink_restart:
-        remote_symlink_list.append(
-            (
-                inputs["parent_folder"].computer.uuid,
-                os.path.join(inputs["parent_folder"].get_remote_path(), "./out/*"),
-                "./out/",
-            )
+        remote_symlink_list.extend(
+            [
+                (
+                    inputs["parent_folder"].computer.uuid,
+                    os.path.join(inputs["parent_folder"].get_remote_path(), "CHARGES"),
+                    "./",
+                ),
+                (
+                    inputs["parent_folder"].computer.uuid,
+                    os.path.join(inputs["parent_folder"].get_remote_path(), "*restart*"),
+                    "./",
+                ),
+            ]
         )
 
     # Check the attributes of the returned `CalcInfo`
@@ -78,7 +87,7 @@ def test_fireball_default(
 
     # Checks on the files written to the sandbox folder as raw input
     assert sorted(fixture_sandbox.get_content_list()) == sorted(
-        ["out", "aiida.in", "aiida.bas", "aiida.lvs", "aiida.kpts"]
+        ["Fdata", "aiida.in", "aiida.bas", "aiida.lvs", "aiida.kpts"]
     )
     file_regression.check(input_written, encoding="utf-8", extension=".in")
 
@@ -106,10 +115,12 @@ def test_fireball_fixed_coords(fixture_sandbox, generate_calc_job, generate_inpu
     inputs["settings"] = orm.Dict(dict={"FIXED_COORDS": [[True, True, False], [False, True, False]]})
     generate_calc_job(fixture_sandbox, entry_point_name, inputs)
 
-    with fixture_sandbox.open("aiida.in") as handle:
+    assert "FRAGMENTS" in fixture_sandbox.get_content_list()
+
+    with fixture_sandbox.open("FRAGMENTS") as handle:
         input_written = handle.read()
 
-    file_regression.check(input_written, encoding="utf-8", extension=".in")
+    file_regression.check(input_written, encoding="utf-8", extension=".fragments")
 
 
 @pytest.mark.parametrize(
@@ -144,6 +155,24 @@ def test_fireball_missing_inputs(fixture_sandbox, generate_calc_job, generate_in
     del inputs["fdata_remote"]
     error_message = "Error occurred validating port 'inputs.fdata_remote': "
     error_message += "required value was not provided for 'fdata_remote'"
+
+    with pytest.raises(
+        ValueError,
+        match=error_message,
+    ):
+        generate_calc_job(fixture_sandbox, entry_point_name, inputs)
+
+
+def test_fireball_blocked_keywords(fixture_sandbox, generate_calc_job, generate_inputs_base_fireball):
+    """Test a `BaseFireballCalculation` with blocked keywords."""
+    entry_point_name = "fireball.base"
+
+    inputs = generate_inputs_base_fireball()
+    parameters = inputs["parameters"].get_dict()
+    parameters.setdefault("OPTION", {})["basisfile"] = "test.bas"
+    inputs["parameters"] = orm.Dict(parameters)
+
+    error_message = "Cannot specify the 'basisfile' keyword in the 'OPTION' namelist."
 
     with pytest.raises(
         ValueError,
