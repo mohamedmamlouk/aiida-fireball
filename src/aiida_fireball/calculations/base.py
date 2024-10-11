@@ -317,7 +317,7 @@ class BaseFireballCalculation(CalcJob):
         file_lines.append("1")
         file_lines.append(f"{len(ase_structure):3d}")
 
-        for i, atom, fix in zip(range(len(ase_structure)), ase_structure, fixed_coords):
+        for i, fix in zip(range(len(ase_structure)), fixed_coords):
             file_lines.append(f"{i+1:3d} {int(fix[0]):1d} {int(fix[1]):1d} {int(fix[2]):1d}")
 
         return "\n".join(file_lines) + "\n"
