@@ -65,6 +65,7 @@ Source = "https://github.com/ValkScripter/aiida-fireball"
 [project.entry-points."aiida.data"]
 
 [project.entry-points."aiida.calculations"]
+"fireball.scf" = "aiida_fireball.calculations.scf:ScfCalculation"
 
 [project.entry-points."aiida.parsers"]
 

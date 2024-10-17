@@ -4,6 +4,7 @@
 import os
 
 import pytest
+from ase import build
 
 # pytest_plugins = ["aiida.tools.pytest_fixtures"]
 pytest_plugins = ["aiida.manage.tests.pytest_fixtures"]  # pylint: disable=invalid-name
@@ -170,6 +171,8 @@ def generate_structure():
             structure = StructureData(cell=cell, pbc=(True, True, False))
             structure.append_atom(position=(1.804, 1.042, 11.352), symbols="As", name="As")
             structure.append_atom(position=(0, 2.083, 9.960), symbols="As", name="As")
+        elif structure_id == "2D-graphene":
+            structure = StructureData(ase=build.graphene(vacuum=15.0))
         elif structure_id == "1D-x-carbon":
             cell = [[4.2, 0, 0], [0, 20, 0], [0, 0, 20]]
             structure = StructureData(cell=cell, pbc=(True, False, False))
@@ -221,7 +224,10 @@ def generate_kpoints_mesh():
         from aiida.orm import KpointsData
 
         kpoints = KpointsData()
-        kpoints.set_kpoints_mesh([npoints] * 3)
+        if isinstance(npoints, int):
+            kpoints.set_kpoints_mesh([npoints] * 3)
+        else:
+            kpoints.set_kpoints_mesh(npoints)
 
         return kpoints
 
@@ -360,3 +366,51 @@ def generate_inputs_base_fireball(
         return inputs
 
     return _generate_inputs_base_fireball
+
+
+@pytest.fixture
+def generate_inputs_scf_fireball(
+    fixture_code, generate_structure, generate_kpoints_mesh, generate_remote_data, fixture_localhost
+):
+    """Generate default inputs for a `BaseFireballCalculation."""
+
+    def _generate_inputs_scf_fireball():
+        """Generate default inputs for a `BaseFireballCalculation."""
+        from aiida.orm import Dict
+
+        parameters = Dict(
+            {
+                # "OPTION": {
+                #     "basisfile": "aiida.bas",
+                #     "lvsfile": "aiida.lvs",
+                #     "kptpreference": "aiida.kpts",
+                # },
+                "OUTPUT": {
+                    "iwrtewf": 0,
+                    "iwrtdos": 0,
+                    "iwrtxyz": 1,
+                    "iwrteigen": 0,
+                    "iwrtefermi": 0,
+                    "iwrtcdcoefs": 0,
+                },
+            }
+        )
+        structure = generate_structure("2D-graphene")
+        inputs = {
+            "code": fixture_code("quantumespresso.pw"),
+            "structure": structure,
+            "kpoints": generate_kpoints_mesh((3, 3, 1)),
+            "parameters": parameters,
+            "fdata_remote": generate_remote_data(computer=fixture_localhost, remote_path="/path/to/fdata"),
+            "parent_folder": generate_remote_data(computer=fixture_localhost, remote_path="/path/to/parent"),
+            "metadata": {
+                "options": {
+                    "resources": {"num_machines": 1, "num_mpiprocs_per_machine": 1},
+                    "max_wallclock_seconds": 1800,
+                    "withmpi": False,
+                }
+            },
+        }
+        return inputs
+
+    return _generate_inputs_scf_fireball

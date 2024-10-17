@@ -23,9 +23,6 @@ class BaseFireballCalculation(CalcJob):
     _FDATA_SUBFOLDER = "./Fdata/"
     _CRASH_FILE = "CRASH"
 
-    # Name lists to print by calculation type
-    _automatic_namelists = {}
-
     # Blocked keywords that are to be specified in the subclass:
     _blocked_keywords = {
         "OPTION": {
