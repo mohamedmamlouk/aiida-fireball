@@ -3,6 +3,7 @@
 import re
 from typing import Optional, Tuple
 
+from aiida import orm
 from aiida.common import AttributeDict
 from aiida.engine import ExitCode
 from aiida.parsers import Parser
@@ -20,9 +21,10 @@ class ScfParser(Parser):
         """Parse outputs and store results in the database."""
         logs = get_logging_container()
 
+        # Parse the stdout content
         parsed_data, logs = self.parse_stdout(logs)
-
         self.emit_logs(logs, ignore=None)
+        self.out("output_parameters", orm.Dict(parsed_data))
 
     def parse_stdout(self, logs: AttributeDict) -> Tuple[str, dict, AttributeDict]:
         """Parse the stdout content of a Fireball SCF calculation."""

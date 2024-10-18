@@ -49,10 +49,10 @@ def test_parse_raw_stdout_total_energy(stdout, expected):
 @pytest.mark.parametrize(
     "stdout, expected",
     [
-        ("Fermi level = 5.4321", 5.4321),
-        ("   Fermi level = -5.4321", -5.4321),
-        ("Fermi level = 0.0", 0.0),
-        ("Some text\n       Fermi level =          +0.1234 \n  Some more text", 0.1234),
+        ("Fermi Level = 5.4321", 5.4321),
+        ("   Fermi Level = -5.4321", -5.4321),
+        ("Fermi Level = 0.0", 0.0),
+        ("Some text\n       Fermi Level =          +0.1234 \n  Some more text", 0.1234),
     ],
 )
 def test_parse_raw_stdout_fermi_energy(stdout, expected):

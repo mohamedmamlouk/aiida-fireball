@@ -15,7 +15,7 @@ class BaseFireballCalculation(CalcJob):
     """Base `CalcJob` for Fireball calculations"""
 
     _PREFIX = "aiida"
-    _DEFAULT_INPUT_FILE = "aiida.in"
+    _DEFAULT_INPUT_FILE = "fireball.in"
     _DEFAULT_OUTPUT_FILE = "aiida.out"
     _DEFAULT_BAS_FILE = "aiida.bas"
     _DEFAULT_LVS_FILE = "aiida.lvs"
@@ -57,13 +57,13 @@ class BaseFireballCalculation(CalcJob):
         spec.input("settings", valid_type=Dict, required=False, help="Additional input parameters.")
         spec.input("metadata.options.input_filename", valid_type=str, default=cls._DEFAULT_INPUT_FILE)
         spec.input("metadata.options.output_filename", valid_type=str, default=cls._DEFAULT_OUTPUT_FILE)
-        spec.input("metadata.options.withmpi", valid_type=bool, default=True)
+        spec.input("metadata.options.withmpi", valid_type=bool, default=False)
         spec.input(
             "parent_folder", valid_type=RemoteData, required=False, help="The parent remote folder to restart from."
         )
         spec.inputs["metadata"]["options"]["resources"].default = lambda: {
             "num_machines": 1,
-            "num_mpiprocs_per_machine": 1,
+            "num_cores_per_machine": 1,
         }
         spec.inputs.validator = cls.validate_inputs
 
@@ -202,7 +202,7 @@ class BaseFireballCalculation(CalcJob):
         # Prepare the code info
         codeinfo = CodeInfo()
         codeinfo.code_uuid = self.inputs.code.uuid
-        codeinfo.cmdline_params = [self.inputs.metadata.options.input_filename]
+        codeinfo.cmdline_params = []  # Fireball reads directly from the input file 'fireball.in'
         codeinfo.stdout_name = self.inputs.metadata.options.output_filename
 
         # Prepare the calculation info
