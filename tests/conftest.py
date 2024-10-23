@@ -6,6 +6,7 @@ import shutil
 from collections.abc import Mapping
 
 import pytest
+from aiida.common import CalcInfo
 from ase import build
 
 # pytest_plugins = ["aiida.tools.pytest_fixtures"]
@@ -303,7 +304,7 @@ def generate_calc_job():
     to it, into which the raw input files will have been written.
     """
 
-    def _generate_calc_job(folder, entry_point_name, inputs=None):
+    def _generate_calc_job(folder, entry_point_name, inputs=None) -> CalcInfo:
         """Fixture to generate a mock `CalcInfo` for testing calculation jobs."""
         from aiida.engine.utils import instantiate_process
         from aiida.manage.manager import get_manager
@@ -336,9 +337,7 @@ def generate_calc_job_node(fixture_localhost):
                 flat_inputs.append((prefix + key, value))
         return flat_inputs
 
-    def _generate_calc_job_node(
-        entry_point_name="base", computer=None, test_name=None, inputs=None, attributes=None, retrieve_temporary=None
-    ):
+    def _generate_calc_job_node(entry_point_name="base", computer=None, test_name=None, inputs=None, attributes=None, retrieve_temporary=None):
         """Fixture to generate a mock `CalcJobNode` for testing parsers.
 
         :param entry_point_name: entry point name of the calculation class
@@ -418,19 +417,21 @@ def generate_calc_job_node(fixture_localhost):
             remote_folder.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label="remote_folder")
             remote_folder.store()
 
+            output_parameters = orm.Dict({"fermi_energy": -5.0})
+            output_parameters.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label="output_parameters")
+            output_parameters.store()
+
         return node
 
     return _generate_calc_job_node
 
 
 @pytest.fixture
-def generate_inputs_base_fireball(
-    fixture_code, generate_structure, generate_kpoints_mesh, generate_remote_data, fixture_localhost
-):
-    """Generate default inputs for a `BaseFireballCalculation."""
+def generate_inputs_fireball(fixture_code, generate_structure, generate_kpoints_mesh, generate_remote_data, fixture_localhost):
+    """Generate default inputs for a `FireballCalculation."""
 
-    def _generate_inputs_base_fireball():
-        """Generate default inputs for a `BaseFireballCalculation."""
+    def _generate_inputs_fireball():
+        """Generate default inputs for a `FireballCalculation."""
         from aiida.orm import Dict
 
         parameters = Dict(
@@ -442,55 +443,6 @@ def generate_inputs_base_fireball(
                 # },
                 "OUTPUT": {
                     "iwrtewf": 0,
-                    "iwrtdos": 0,
-                    "iwrtxyz": 1,
-                    "iwrteigen": 0,
-                    "iwrtefermi": 0,
-                    "iwrtcdcoefs": 0,
-                },
-            }
-        )
-        structure = generate_structure()
-        inputs = {
-            "code": fixture_code("quantumespresso.pw"),
-            "structure": structure,
-            "kpoints": generate_kpoints_mesh(2),
-            "parameters": parameters,
-            "fdata_remote": generate_remote_data(computer=fixture_localhost, remote_path="/path/to/fdata"),
-            "parent_folder": generate_remote_data(computer=fixture_localhost, remote_path="/path/to/parent"),
-            "metadata": {
-                "options": {
-                    "resources": {"num_machines": 1, "num_mpiprocs_per_machine": 1},
-                    "max_wallclock_seconds": 1800,
-                    "withmpi": False,
-                }
-            },
-        }
-        return inputs
-
-    return _generate_inputs_base_fireball
-
-
-@pytest.fixture
-def generate_inputs_scf_fireball(
-    fixture_code, generate_structure, generate_kpoints_mesh, generate_remote_data, fixture_localhost
-):
-    """Generate default inputs for a `BaseFireballCalculation."""
-
-    def _generate_inputs_scf_fireball():
-        """Generate default inputs for a `BaseFireballCalculation."""
-        from aiida.orm import Dict
-
-        parameters = Dict(
-            {
-                # "OPTION": {
-                #     "basisfile": "aiida.bas",
-                #     "lvsfile": "aiida.lvs",
-                #     "kptpreference": "aiida.kpts",
-                # },
-                "OUTPUT": {
-                    "iwrtewf": 0,
-                    "iwrtdos": 0,
                     "iwrtxyz": 1,
                     "iwrteigen": 0,
                     "iwrtefermi": 0,
@@ -500,7 +452,7 @@ def generate_inputs_scf_fireball(
         )
         structure = generate_structure("2D-graphene")
         inputs = {
-            "code": fixture_code("quantumespresso.pw"),
+            "code": fixture_code("fireball.fireball"),
             "structure": structure,
             "kpoints": generate_kpoints_mesh((3, 3, 1)),
             "parameters": parameters,
@@ -508,7 +460,7 @@ def generate_inputs_scf_fireball(
             "parent_folder": generate_remote_data(computer=fixture_localhost, remote_path="/path/to/parent"),
             "metadata": {
                 "options": {
-                    "resources": {"num_machines": 1, "num_mpiprocs_per_machine": 1},
+                    "resources": {"num_machines": 1, "num_cores_per_machine": 1},
                     "max_wallclock_seconds": 1800,
                     "withmpi": False,
                 }
@@ -516,4 +468,4 @@ def generate_inputs_scf_fireball(
         }
         return inputs
 
-    return _generate_inputs_scf_fireball
+    return _generate_inputs_fireball

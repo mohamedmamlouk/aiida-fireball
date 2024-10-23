@@ -65,10 +65,10 @@ Source = "https://github.com/ValkScripter/aiida-fireball"
 [project.entry-points."aiida.data"]
 
 [project.entry-points."aiida.calculations"]
-"fireball.scf" = "aiida_fireball.calculations.scf:ScfCalculation"
+"fireball.fireball" = "aiida_fireball.calculations.fireball:FireballCalculation"
 
 [project.entry-points."aiida.parsers"]
-"fireball.scf" = "aiida_fireball.parsers.scf:ScfParser"
+"fireball.fireball" = "aiida_fireball.parsers.fireball:FireballParser"
 
 [project.entry-points."aiida.cmdline.data"]
 
@@ -84,13 +84,13 @@ filterwarnings = [
 ]
 
 [tool.flynt]
-line-length = 120
+line-length = 150
 fail-on-change = true
 
 [tool.isort]
 force_sort_within_sections = true
 include_trailing_comma = true
-line_length = 120
+line_length = 150
 multi_line_output = 3  # this configuration is compatible with yapf
 
 [tool.coverage.run]
@@ -99,7 +99,7 @@ multi_line_output = 3  # this configuration is compatible with yapf
 source = ["src/aiida_fireball"]
 
 [tool.ruff]
-line-length = 120
+line-length = 150
 
 [tool.ruff.lint]
 ignore = [
@@ -130,7 +130,7 @@ select = [
 load-plugins = ['pylint_aiida','pylint.extensions.no_self_use']
 
 [tool.pylint.format]
-max-line-length = 120
+max-line-length = 150
 
 [tool.pylint.tool-check]
 generated-members = 'self.exit_codes.*'
@@ -164,7 +164,7 @@ good-names = [
 align_closing_bracket_with_visual_indent = true
 based_on_style = 'google'
 coalesce_brackets = true
-column_limit = 120
+column_limit = 150
 dedent_closing_brackets = true
 indent_dictionary_value = false
 split_arguments_when_comma_terminated = true

@@ -6,7 +6,6 @@
 &END
 &OUTPUT
   iwrtcdcoefs = 0
-  iwrtdos = 0
   iwrtefermi = 0
   iwrteigen = 0
   iwrtewf = 0

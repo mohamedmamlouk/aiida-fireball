@@ -1,4 +1,4 @@
-"""Parser implementation for the ScfCalculation calculation job class."""
+"""Parser implementation for the FireballCalculation calculation job class."""
 
 import re
 from typing import Optional, Tuple
@@ -12,8 +12,8 @@ from . import get_logging_container
 from .parse_raw import parse_raw_stdout
 
 
-class ScfParser(Parser):
-    """`Parser` implementation for the `ScfCalculation` calculation job class."""
+class FireballParser(Parser):
+    """`Parser` implementation for the `FireballCalculation` calculation job class."""
 
     success_string = "FIREBALL RUNTIME"
 
@@ -27,7 +27,7 @@ class ScfParser(Parser):
         self.out("output_parameters", orm.Dict(parsed_data))
 
     def parse_stdout(self, logs: AttributeDict) -> Tuple[str, dict, AttributeDict]:
-        """Parse the stdout content of a Fireball SCF calculation."""
+        """Parse the stdout content of a Fireball calculation."""
         output_filename = self.node.get_option("output_filename")
 
         if output_filename not in self.retrieved.base.repository.list_object_names():
@@ -67,9 +67,7 @@ class ScfParser(Parser):
 
         return parsed_data, logs
 
-    def emit_logs(
-        self, logs: list[AttributeDict] | tuple[AttributeDict] | AttributeDict, ignore: Optional[list]
-    ) -> None:
+    def emit_logs(self, logs: list[AttributeDict] | tuple[AttributeDict] | AttributeDict, ignore: Optional[list]) -> None:
         """Emit the messages in one or multiple "log dictionaries" through the logger of the parser.
 
         A log dictionary is expected to have the following structure: each key must correspond to a log level of the
