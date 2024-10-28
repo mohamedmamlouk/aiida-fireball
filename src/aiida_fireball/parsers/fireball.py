@@ -1,12 +1,15 @@
 """Parser implementation for the FireballCalculation calculation job class."""
 
+import os
 import re
 from typing import Optional, Tuple
 
+import numpy as np
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.engine import ExitCode
 from aiida.parsers import Parser
+from ase import Atoms
 
 from . import get_logging_container
 from .parse_raw import parse_raw_stdout
@@ -15,7 +18,7 @@ from .parse_raw import parse_raw_stdout
 class FireballParser(Parser):
     """`Parser` implementation for the `FireballCalculation` calculation job class."""
 
-    success_string = "FIREBALL RUNTIME"
+    success_string = "(FIREBALL RUNTIME)|(That`sall for now)"
 
     def parse(self, **kwargs) -> ExitCode | None:
         """Parse outputs and store results in the database."""
@@ -25,6 +28,21 @@ class FireballParser(Parser):
         parsed_data, logs = self.parse_stdout(logs)
         self.emit_logs(logs, ignore=None)
         self.out("output_parameters", orm.Dict(parsed_data))
+
+        # Absolute path to the retrieved temporary folder
+        retrieved_temporary_folder: str = kwargs.get("retrieved_temporary_folder")
+
+        # Parse output structure from 'answer.bas' file in the retrieved_temporary_folder
+        # and store it in the 'output_structure' output node
+        output_structure, logs = self.parse_output_structure(retrieved_temporary_folder, parsed_data.get("rescale_factor", 1.0), logs)
+        self.emit_logs(logs, ignore=None)
+        self.out("output_structure", output_structure)
+
+        # Parse output trajectory from 'answer.xyz' file in the retrieved_temporary_folder
+        # and store it in the 'output_trajectory' output node
+        output_trajectory, logs = self.parse_output_trajectory(retrieved_temporary_folder, parsed_data.get("rescale_factor", 1.0), logs)
+        self.emit_logs(logs, ignore=None)
+        self.out("output_trajectory", output_trajectory)
 
     def parse_stdout(self, logs: AttributeDict) -> Tuple[str, dict, AttributeDict]:
         """Parse the stdout content of a Fireball calculation."""
@@ -44,7 +62,7 @@ class FireballParser(Parser):
 
         try:
             parsed_data, logs = self._parse_stdout_base(stdout, logs)
-        except Exception as exception:
+        except (ValueError, KeyError, OSError) as exception:
             logs.error.append("ERROR_OUTPUT_STDOUT_PARSE")
             logs.error.append(exception)
             return stdout, {}, logs
@@ -66,6 +84,100 @@ class FireballParser(Parser):
         parsed_data = parse_raw_stdout(stdout)
 
         return parsed_data, logs
+
+    def parse_output_structure(self, retrieved_temporary_folder: str, rescale_factor: float, logs: AttributeDict) -> orm.StructureData:
+        """Parse the output structure from the 'answer.bas' file in the retrieved temporary folder.
+        rescale_factor: used to rescale the input structure cell to the output structure cell.
+        the answer.bas file contains the atomic positions of the output structure (already scaled).
+        """
+        answer_bas_file = os.path.join(retrieved_temporary_folder, "answer.bas")
+
+        if not os.path.isfile(answer_bas_file):
+            logs.error.append("ERROR_OUTPUT_STRUCTURE_NOT_FOUND")
+            return None, logs
+
+        with open(answer_bas_file, "r", encoding="utf-8") as handle:
+            lines = handle.readlines()
+            numbers = []
+            positions = []
+            natoms = int(lines.pop(0).strip())
+            for _ in range(natoms):
+                line = lines.pop(0).strip()
+                number, *coords = line.split()[:4]
+                number = int(number)
+                numbers.append(number)
+                positions.append([float(coord.strip()) for coord in coords])
+
+        # Create the structure
+        input_structure: orm.StructureData = self.node.inputs.structure
+        cell = np.array(input_structure.cell) * rescale_factor
+        ase_structure = Atoms(numbers=numbers, positions=positions, cell=cell)
+        structure = orm.StructureData(ase=ase_structure)
+
+        return structure, logs
+
+    def parse_output_trajectory(self, retrieved_temporary_folder: str, rescale_factor: float, logs: AttributeDict) -> orm.TrajectoryData:
+        """Parse the output trajectory from the 'answer.xyz' file in the retrieved temporary folder if it exists.
+        rescale_factor: used to rescale the input structure cell to the output structure cells.
+        the answer.xyz file contains the atomic positions of the output structures (already scaled).
+        """
+        answer_xyz_file = os.path.join(retrieved_temporary_folder, "answer.xyz")
+
+        if not os.path.isfile(answer_xyz_file):
+            # logs.error.append("ERROR_OUTPUT_TRAJECTORY_NOT_FOUND")
+            return None, logs
+
+        # pylint: disable=line-too-long
+        comment_match = re.compile(
+            r"\s*ETOT =\s*(?P<energy>[+-]?\d+\.\d+)\s*eV; T =\s*(?P<temperature>\d+\.\d+)\s*K; Time =\s*(?P<time>\d+\.\d+)\s*fs"
+        )
+
+        with open(answer_xyz_file, "r", encoding="utf-8") as handle:
+            lines = handle.readlines()
+            images: list[Atoms] = []
+            energies: list[float | None] = []
+            temperatures: list[float | None] = []
+            times: list[float | None] = []
+            while len(lines) > 0:
+                symbols: list[str] = []
+                positions: list[list[float]] = []
+                natoms = int(lines.pop(0))
+                comment = lines.pop(0)  # Comment line with energy, temperature, and time
+                match = comment_match.match(comment)
+                if match:
+                    energies.append(float(match.group("energy")))
+                    temperatures.append(float(match.group("temperature")))
+                    times.append(float(match.group("time")))
+                else:
+                    energies.append(None)
+                    temperatures.append(None)
+                    times.append(None)
+                for _ in range(natoms):
+                    line = lines.pop(0)
+                    symbol, *coords = line.split()[:4]
+                    symbol = symbol.lower().capitalize()
+                    symbols.append(symbol)
+                    positions.append([float(coord.strip()) for coord in coords])
+                images.append(Atoms(symbols=symbols, positions=positions))
+
+        # Create the trajectory
+        symbols: list[str] = images[0].get_chemical_symbols()
+        positions: np.ndarray = np.array([image.get_positions() for image in images])
+        cells: np.ndarray = np.array([np.array(self.node.inputs.structure.cell) * rescale_factor for _ in range(len(images))])
+        times: np.ndarray = np.array(times)
+        temperatures: np.ndarray = np.array(temperatures)
+        energies: np.ndarray = np.array(energies)
+        trajectory = orm.TrajectoryData()
+        trajectory.set_trajectory(
+            symbols=symbols,
+            positions=positions,
+            cells=cells,
+            times=times,
+        )
+        trajectory.set_array("temperatures", temperatures)
+        trajectory.set_array("energies", energies)
+
+        return trajectory, logs
 
     def emit_logs(self, logs: list[AttributeDict] | tuple[AttributeDict] | AttributeDict, ignore: Optional[list]) -> None:
         """Emit the messages in one or multiple "log dictionaries" through the logger of the parser.

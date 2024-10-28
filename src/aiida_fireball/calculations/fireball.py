@@ -320,6 +320,10 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
         calcinfo.retrieve_list += settings.pop("ADDITIONAL_RETRIEVE_LIST", [])
         calcinfo.retrieve_list += self._internal_retrieve_list
 
+        # Retrieve temporary files
+        calcinfo.retrieve_temporary_list = []
+        calcinfo.retrieve_temporary_list.append("answer.*")
+
         return calcinfo
 
     @classmethod
