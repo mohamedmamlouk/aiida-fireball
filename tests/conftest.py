@@ -6,6 +6,7 @@ import shutil
 from collections.abc import Mapping
 
 import pytest
+from aiida import orm
 from aiida.common import CalcInfo
 from ase import build
 
@@ -14,7 +15,7 @@ pytest_plugins = ["aiida.manage.tests.pytest_fixtures"]  # pylint: disable=inval
 
 
 @pytest.fixture(scope="session")
-def filepath_tests():
+def filepath_tests() -> str:
     """Return the absolute filepath of the `tests` folder.
 
     .. warning:: if this file moves with respect to the `tests` folder, the implementation should change.
@@ -25,7 +26,7 @@ def filepath_tests():
 
 
 @pytest.fixture
-def filepath_fixtures(filepath_tests):
+def filepath_fixtures(filepath_tests) -> str:
     """Return the absolute filepath to the directory containing the file `fixtures`."""
     return os.path.join(filepath_tests, "fixtures")
 
@@ -139,54 +140,52 @@ def serialize_builder():
 def generate_structure():
     """Return a ``StructureData`` representing either bulk silicon or a water molecule."""
 
-    def _generate_structure(structure_id="silicon"):
+    def _generate_structure(structure_id="silicon") -> orm.StructureData:
         """Return a ``StructureData`` representing bulk silicon or a snapshot of a single water molecule dynamics.
 
         :param structure_id: identifies the ``StructureData`` you want to generate. Either 'silicon' or 'water'.
         """
-        from aiida.orm import StructureData
-
         if structure_id.startswith("silicon"):
             name1 = "Si0" if structure_id.endswith("kinds") else "Si"
             name2 = "Si1" if structure_id.endswith("kinds") else "Si"
             param = 5.43
             cell = [[param / 2.0, param / 2.0, 0], [param / 2.0, 0, param / 2.0], [0, param / 2.0, param / 2.0]]
-            structure = StructureData(cell=cell)
+            structure = orm.StructureData(cell=cell)
             structure.append_atom(position=(0.0, 0.0, 0.0), symbols="Si", name=name1)
             structure.append_atom(position=(param / 4.0, param / 4.0, param / 4.0), symbols="Si", name=name2)
         elif structure_id == "cobalt-prim":
             cell = [[0.0, 2.715, 2.715], [2.715, 0.0, 2.715], [2.715, 2.715, 0.0]]
-            structure = StructureData(cell=cell)
+            structure = orm.StructureData(cell=cell)
             structure.append_atom(position=(0.0, 0.0, 0.0), symbols="Co", name="Co")
         elif structure_id == "water":
-            structure = StructureData(cell=[[5.29177209, 0.0, 0.0], [0.0, 5.29177209, 0.0], [0.0, 0.0, 5.29177209]])
+            structure = orm.StructureData(cell=[[5.29177209, 0.0, 0.0], [0.0, 5.29177209, 0.0], [0.0, 0.0, 5.29177209]])
             structure.append_atom(position=[12.73464656, 16.7741411, 24.35076238], symbols="H", name="H")
             structure.append_atom(position=[-29.3865565, 9.51707929, -4.02515904], symbols="H", name="H")
             structure.append_atom(position=[1.04074437, -1.64320127, -1.27035021], symbols="O", name="O")
         elif structure_id == "uranium":
             param = 5.43
             cell = [[param / 2.0, param / 2.0, 0], [param / 2.0, 0, param / 2.0], [0, param / 2.0, param / 2.0]]
-            structure = StructureData(cell=cell)
+            structure = orm.StructureData(cell=cell)
             structure.append_atom(position=(0.0, 0.0, 0.0), symbols="U", name="U")
             structure.append_atom(position=(param / 4.0, param / 4.0, param / 4.0), symbols="U", name="U")
         elif structure_id == "2D-xy-arsenic":
             cell = [[3.61, 0, 0], [-1.80, 3.13, 0], [0, 0, 21.3]]
-            structure = StructureData(cell=cell, pbc=(True, True, False))
+            structure = orm.StructureData(cell=cell, pbc=(True, True, False))
             structure.append_atom(position=(1.804, 1.042, 11.352), symbols="As", name="As")
             structure.append_atom(position=(0, 2.083, 9.960), symbols="As", name="As")
         elif structure_id == "2D-graphene":
-            structure = StructureData(ase=build.graphene(vacuum=15.0))
+            structure = orm.StructureData(ase=build.graphene(vacuum=15.0))
         elif structure_id == "1D-x-carbon":
             cell = [[4.2, 0, 0], [0, 20, 0], [0, 0, 20]]
-            structure = StructureData(cell=cell, pbc=(True, False, False))
+            structure = orm.StructureData(cell=cell, pbc=(True, False, False))
             structure.append_atom(position=(0, 0, 0), symbols="C", name="C")
         elif structure_id == "1D-y-carbon":
             cell = [[20, 0, 0], [0, 4.2, 0], [0, 0, 20]]
-            structure = StructureData(cell=cell, pbc=(False, True, False))
+            structure = orm.StructureData(cell=cell, pbc=(False, True, False))
             structure.append_atom(position=(0, 0, 0), symbols="C", name="C")
         elif structure_id == "1D-z-carbon":
             cell = [[20, 0, 0], [0, 20, 0], [0, 0, 4.2]]
-            structure = StructureData(cell=cell, pbc=(False, False, True))
+            structure = orm.StructureData(cell=cell, pbc=(False, False, True))
             structure.append_atom(position=(0, 0, 0), symbols="C", name="C")
         else:
             raise KeyError(f'Unknown structure_id="{structure_id}"')
@@ -199,11 +198,9 @@ def generate_structure():
 def generate_structure_from_kinds():
     """Return a dummy `StructureData` instance with the specified kind names."""
 
-    def _generate_structure_from_kinds(site_kind_names):
+    def _generate_structure_from_kinds(site_kind_names) -> orm.StructureData:
         """Return a dummy `StructureData` instance with the specified kind names."""
         import re
-
-        from aiida import orm
 
         if not isinstance(site_kind_names, (list, tuple)):
             site_kind_names = (site_kind_names,)
@@ -222,7 +219,7 @@ def generate_structure_from_kinds():
 def generate_kpoints_mesh():
     """Return a `KpointsData` node."""
 
-    def _generate_kpoints_mesh(npoints):
+    def _generate_kpoints_mesh(npoints) -> orm.KpointsData:
         """Return a `KpointsData` with a mesh of npoints in each direction."""
         from aiida.orm import KpointsData
 
@@ -241,7 +238,7 @@ def generate_kpoints_mesh():
 def generate_kpoints():
     """Return a `KpointsData` node."""
 
-    def _generate_kpoints(kpts):
+    def _generate_kpoints(kpts) -> orm.KpointsData:
         """Return a `KpointsData` with given kpoints."""
         from aiida.orm import KpointsData
 
@@ -256,8 +253,9 @@ def generate_kpoints():
 @pytest.fixture(scope="session")
 def generate_parser():
     """Fixture to load a parser class for testing parsers."""
+    from aiida.parsers import Parser
 
-    def _generate_parser(entry_point_name):
+    def _generate_parser(entry_point_name) -> Parser:
         """Fixture to load a parser class for testing parsers.
 
         :param entry_point_name: entry point name of the parser class
@@ -274,7 +272,7 @@ def generate_parser():
 def generate_remote_data():
     """Return a `RemoteData` node."""
 
-    def _generate_remote_data(computer, remote_path, entry_point_name=None):
+    def _generate_remote_data(computer, remote_path, entry_point_name=None) -> orm.RemoteData:
         """Return a `RemoteData` node."""
         from aiida.common.links import LinkType
         from aiida.orm import CalcJobNode, RemoteData
@@ -337,7 +335,9 @@ def generate_calc_job_node(fixture_localhost):
                 flat_inputs.append((prefix + key, value))
         return flat_inputs
 
-    def _generate_calc_job_node(entry_point_name="base", computer=None, test_name=None, inputs=None, attributes=None, retrieve_temporary=None):
+    def _generate_calc_job_node(
+        entry_point_name="base", computer=None, test_name=None, inputs=None, attributes=None, retrieve_temporary=None
+    ) -> orm.CalcJobNode:
         """Fixture to generate a mock `CalcJobNode` for testing parsers.
 
         :param entry_point_name: entry point name of the calculation class

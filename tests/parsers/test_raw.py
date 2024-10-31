@@ -1,7 +1,7 @@
 """Tests for the pares_raw functions"""
 
 import pytest
-from aiida_fireball.parsers.parse_raw import parse_raw_stdout
+from aiida_fireball.parsers.raw import parse_raw_stdout
 
 
 @pytest.mark.parametrize(

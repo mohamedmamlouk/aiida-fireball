@@ -71,4 +71,24 @@ def parse_raw_stdout(stdout):
     if match:
         parsed_data["rescale_factor"] = float(match.group(1))
 
+    # Parse the quenching mode
+    match = re.search(r"iquench\s*=\s*([+-]?\d+)\s*\n", stdout)
+    if match:
+        quenching_modes = {
+            0: "Free dynamics (Newton)",
+            -1: "Dynamical quenching",
+            -2: "Crude constant temperature MD",
+            -3: "Power quenching",
+            -4: "Conjugate gradient minimization",
+            -5: "Newton-CG minimization (l-bfgs-b)",
+        }
+
+        def mode(n):
+            if n <= 0:
+                return quenching_modes[n]
+            else:
+                return f"Periodic quenching every {n} steps"
+
+        parsed_data["quenching_mode"] = mode(int(match.group(1)))
+
     return parsed_data

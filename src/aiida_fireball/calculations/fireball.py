@@ -91,6 +91,7 @@ class FireballCalculation(CalcJob):
         spec.default_output_node = "output_parameters"
 
         # Exit codes
+        spec.exit_code(301, "ERROR_NO_RETRIEVED_TEMPORARY_FOLDER", message="The retrieved temporary folder could not be accessed.")
         spec.exit_code(
             302,
             "ERROR_OUTPUT_STDOUT_MISSING",

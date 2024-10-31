@@ -12,7 +12,7 @@ from aiida.parsers import Parser
 from ase import Atoms
 
 from . import get_logging_container
-from .parse_raw import parse_raw_stdout
+from .raw import parse_raw_stdout
 
 
 class FireballParser(Parser):
@@ -30,27 +30,31 @@ class FireballParser(Parser):
         self.out("output_parameters", orm.Dict(parsed_data))
 
         # Absolute path to the retrieved temporary folder
-        retrieved_temporary_folder: str = kwargs.get("retrieved_temporary_folder")
+        retrieved_temporary_folder: str = kwargs.get("retrieved_temporary_folder", None)
+        if not retrieved_temporary_folder:
+            return self.exit(self.exit_codes.ERROR_NO_RETRIEVED_TEMPORARY_FOLDER)
 
         # Parse output structure from 'answer.bas' file in the retrieved_temporary_folder
         # and store it in the 'output_structure' output node
         output_structure, logs = self.parse_output_structure(retrieved_temporary_folder, parsed_data.get("rescale_factor", 1.0), logs)
         self.emit_logs(logs, ignore=None)
-        self.out("output_structure", output_structure)
+        if output_structure:
+            self.out("output_structure", output_structure)
 
         # Parse output trajectory from 'answer.xyz' file in the retrieved_temporary_folder
         # and store it in the 'output_trajectory' output node
         output_trajectory, logs = self.parse_output_trajectory(retrieved_temporary_folder, parsed_data.get("rescale_factor", 1.0), logs)
         self.emit_logs(logs, ignore=None)
-        self.out("output_trajectory", output_trajectory)
+        if output_trajectory:
+            self.out("output_trajectory", output_trajectory)
 
-    def parse_stdout(self, logs: AttributeDict) -> Tuple[str, dict, AttributeDict]:
+    def parse_stdout(self, logs: AttributeDict) -> Tuple[dict, AttributeDict]:
         """Parse the stdout content of a Fireball calculation."""
         output_filename = self.node.get_option("output_filename")
 
         if output_filename not in self.retrieved.base.repository.list_object_names():
             logs.error.append("ERROR_OUTPUT_STDOUT_MISSING")
-            return "", {}, logs
+            return {}, logs
 
         try:
             with self.retrieved.open(output_filename, "r") as handle:
@@ -58,14 +62,14 @@ class FireballParser(Parser):
         except OSError as exception:
             logs.error.append("ERROR_OUTPUT_STDOUT_READ")
             logs.error.append(exception)
-            return "", {}, logs
+            return {}, logs
 
         try:
             parsed_data, logs = self._parse_stdout_base(stdout, logs)
         except (ValueError, KeyError, OSError) as exception:
             logs.error.append("ERROR_OUTPUT_STDOUT_PARSE")
             logs.error.append(exception)
-            return stdout, {}, logs
+            return {}, logs
 
         return parsed_data, logs
 
@@ -85,7 +89,9 @@ class FireballParser(Parser):
 
         return parsed_data, logs
 
-    def parse_output_structure(self, retrieved_temporary_folder: str, rescale_factor: float, logs: AttributeDict) -> orm.StructureData:
+    def parse_output_structure(
+        self, retrieved_temporary_folder: str, rescale_factor: float, logs: AttributeDict
+    ) -> tuple[orm.StructureData | None, AttributeDict]:
         """Parse the output structure from the 'answer.bas' file in the retrieved temporary folder.
         rescale_factor: used to rescale the input structure cell to the output structure cell.
         the answer.bas file contains the atomic positions of the output structure (already scaled).
@@ -116,7 +122,9 @@ class FireballParser(Parser):
 
         return structure, logs
 
-    def parse_output_trajectory(self, retrieved_temporary_folder: str, rescale_factor: float, logs: AttributeDict) -> orm.TrajectoryData:
+    def parse_output_trajectory(
+        self, retrieved_temporary_folder: str, rescale_factor: float, logs: AttributeDict
+    ) -> tuple[orm.TrajectoryData | None, AttributeDict]:
         """Parse the output trajectory from the 'answer.xyz' file in the retrieved temporary folder if it exists.
         rescale_factor: used to rescale the input structure cell to the output structure cells.
         the answer.xyz file contains the atomic positions of the output structures (already scaled).
@@ -129,7 +137,7 @@ class FireballParser(Parser):
 
         # pylint: disable=line-too-long
         comment_match = re.compile(
-            r"\s*ETOT =\s*(?P<energy>[+-]?\d+\.\d+)\s*eV; T =\s*(?P<temperature>\d+\.\d+)\s*K; Time =\s*(?P<time>\d+\.\d+)\s*fs"
+            r"\s*ETOT =\s*(?P<energy>[+-]?(\w|\.)*)\s*eV; T =\s*(?P<temperature>(\w|\.)*)\s*K; Time =\s*(?P<time>(\w|\.)*)\s*fs"
         )
 
         with open(answer_xyz_file, "r", encoding="utf-8") as handle:
@@ -179,7 +187,7 @@ class FireballParser(Parser):
 
         return trajectory, logs
 
-    def emit_logs(self, logs: list[AttributeDict] | tuple[AttributeDict] | AttributeDict, ignore: Optional[list]) -> None:
+    def emit_logs(self, logs: list[AttributeDict] | tuple[AttributeDict] | AttributeDict, ignore: Optional[list] = None) -> None:
         """Emit the messages in one or multiple "log dictionaries" through the logger of the parser.
 
         A log dictionary is expected to have the following structure: each key must correspond to a log level of the
@@ -210,3 +218,29 @@ class FireballParser(Parser):
                         continue
 
                     getattr(self.logger, level)(stripped)
+
+    def exit(self, exit_code: ExitCode | None = None, logs: AttributeDict | None = None) -> ExitCode:
+        """Log all messages in the ``logs`` as well as the ``exit_code`` message and return the correct exit code.
+
+        This is a utility function if one wants to return from the parse method and automically add the ``logs`` and
+        exit message associated to and exit code as a log message to the node: e.g.
+        ``return self._exit(self.exit_codes.LABEL))``
+
+        If no ``exit_code`` is provided, the method will check if an ``exit_status`` has already been set on the node
+        and return the corresponding ``ExitCode`` in this case. If not, ``ExitCode(0)`` is returned.
+
+        :param logs: log dictionaries
+        :param exit_code: an ``ExitCode``
+        :return: The correct exit code
+        """
+        if logs:
+            self.emit_logs(logs)
+
+        if exit_code is not None:
+            self.logger.error(exit_code.message)
+        elif self.node.exit_status is not None:
+            exit_code = ExitCode(self.node.exit_status, self.node.exit_message)
+        else:
+            exit_code = ExitCode(0)
+
+        return exit_code
