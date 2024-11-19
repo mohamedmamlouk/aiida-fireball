@@ -31,7 +31,8 @@ dependencies = [
     'pydantic~=2.0',
     'packaging',
     'xmlschema~=2.0',
-    'ase'
+    'ase',
+    'pymc',
 ]
 
 [project.optional-dependencies]
@@ -66,6 +67,7 @@ Source = "https://github.com/ValkScripter/aiida-fireball"
 
 [project.entry-points."aiida.calculations"]
 "fireball.fireball" = "aiida_fireball.calculations.fireball:FireballCalculation"
+"fireball.birch_murnaghan_fit_bayesian" = "aiida_fireball.calculations.birch_murnaghan_fit_bayesian:birch_murnaghan_fit_bayesian"
 
 [project.entry-points."aiida.parsers"]
 "fireball.fireball" = "aiida_fireball.parsers.fireball:FireballParser"
