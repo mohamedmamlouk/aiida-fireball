@@ -123,6 +123,7 @@ class FireballParser(Parser):
         input_structure: orm.StructureData = self.node.inputs.structure
         cell = np.array(input_structure.cell) * rescale_factor
         ase_structure = Atoms(numbers=numbers, positions=positions, cell=cell)
+        ase_structure.set_pbc(input_structure.pbc)
         structure = orm.StructureData(ase=ase_structure)
 
         return structure, logs
