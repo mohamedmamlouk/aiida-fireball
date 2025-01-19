@@ -27,7 +27,6 @@ class FireballParser(Parser):
         # Parse the stdout content
         parsed_data, logs = self.parse_stdout(logs)
         self.emit_logs(logs, ignore=None)
-        self.out("output_parameters", orm.Dict(parsed_data))
 
         # Absolute path to the retrieved temporary folder
         retrieved_temporary_folder: str = kwargs.get("retrieved_temporary_folder", None)
@@ -40,6 +39,12 @@ class FireballParser(Parser):
         self.emit_logs(logs, ignore=None)
         if output_structure:
             self.out("output_structure", output_structure)
+
+        # Add the volume of the output structure to the output parameters
+        if output_structure:
+            output_volume = output_structure.get_cell_volume()
+            parsed_data["volume"] = output_volume
+        self.out("output_parameters", orm.Dict(parsed_data))
 
         # Parse output trajectory from 'answer.xyz' file in the retrieved_temporary_folder
         # and store it in the 'output_trajectory' output node
@@ -118,6 +123,7 @@ class FireballParser(Parser):
         input_structure: orm.StructureData = self.node.inputs.structure
         cell = np.array(input_structure.cell) * rescale_factor
         ase_structure = Atoms(numbers=numbers, positions=positions, cell=cell)
+        ase_structure.set_pbc(input_structure.pbc)
         structure = orm.StructureData(ase=ase_structure)
 
         return structure, logs
