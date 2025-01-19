@@ -92,11 +92,19 @@ def test_fireball_default(fixture_localhost, generate_calc_job_node, generate_pa
     assert "output_structure" in results
     assert "output_trajectory" in results
 
+    output_parameters = results["output_parameters"].get_dict()
+    output_structure = results["output_structure"].base.attributes.all
+    output_trajectory = results["output_trajectory"].base.attributes.all
+
+    for key, value in output_parameters.items():
+        if isinstance(value, float):
+            output_parameters[key] = float(value)
+
     data_regression.check(
         {
-            "output_parameters": results["output_parameters"].get_dict(),
-            "output_structure": results["output_structure"].base.attributes.all,
-            "output_trajectory": results["output_trajectory"].base.attributes.all,
+            "output_parameters": output_parameters,
+            "output_structure": output_structure,
+            "output_trajectory": output_trajectory,
         }
     )
 
