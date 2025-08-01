@@ -40,7 +40,6 @@ extensions = [
     'sphinx.ext.githubpages',
     'myst_parser',
     'sphinx_copybutton',
-    'sphinx_design',
     'sphinx.ext.todo',
 ]
 
