@@ -91,9 +91,8 @@ parameters = {
         'nstepf': 1,        # Number of MD steps
     },
     'OUTPUT': {
-        'iwrtpop': 1,       # Write population analysis
         'iwrtdos': 0,       # Don't write DOS
-        'iwrtatom': 1,      # Write atomic information
+        'iwrtxyz': 1,       # Write position trajectory
     }
 }
 
@@ -130,7 +129,25 @@ FireballCalculation = CalculationFactory('fireball')
 # Load your code
 code = orm.load_code('fireball@localhost')  # Use your code label
 
-# Set up all inputs
+# Alternative method using builder (recommended)
+builder = FireballCalculation.get_builder()
+builder.code = code
+builder.structure = structure
+builder.parameters = parameters_node
+builder.kpoints = kpoints
+builder.fdata_remote = fdata_remote
+builder.metadata.label = 'silicon_scf'
+builder.metadata.description = 'Silicon SCF calculation with Fireball'
+builder.metadata.options.resources = {
+    'num_machines': 1,
+    'num_mpiprocs_per_machine': 1,
+}
+builder.metadata.options.max_wallclock_seconds = 1800  # 30 minutes
+
+# Submit using builder
+calc_node = submit(builder)
+
+# Alternative: Set up all inputs as dictionary
 inputs = {
     'code': code,
     'structure': structure,
@@ -151,7 +168,8 @@ inputs = {
 }
 
 # Submit the calculation
-calc_node = submit(FireballCalculation, **inputs)
+# calc_node = submit(FireballCalculation, **inputs)
+
 print(f"Submitted calculation with PK={calc_node.pk}")
 print(f"Monitor with: verdi process status {calc_node.pk}")
 ```
@@ -213,7 +231,7 @@ else:
 
 - **aiida.out**: Main output file with calculation results
 - **answer.bas**: Final atomic positions (for optimizations)
-- **CHARGES**: Atomic charges from population analysis
+- **CHARGES**: Atomic charges
 
 ### Common Output Parameters
 

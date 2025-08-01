@@ -69,10 +69,11 @@ parameters = orm.Dict({
         'iquench': 0,       # No optimization
         'dt': 0.25,         # Time step
         'nstepf': 1,        # Number of steps
+        'ifixcharges': 1,   # Fix atomic charges
     },
     'OUTPUT': {
-        'iwrtpop': 1,       # Write population analysis
         'iwrtdos': 0,       # Don't write DOS
+        'iwrtxyz': 1,       # Write position trajectory
     }
 })
 

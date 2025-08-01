@@ -66,30 +66,22 @@ Your Fdata directory should contain subdirectories for each element (e.g., `C/`,
 
 ## Step 3: Create a Simple Structure
 
-Let's create a simple water molecule for our first calculation:
+Let's create a simple silicon crystal structure using ASE:
 
 ```python
+from ase import Atoms
+from ase.build import bulk
 from aiida.plugins import DataFactory
 
-StructureData = DataFactory('structure')
+StructureData = DataFactory('core.structure')
 
-# Create a water molecule
-structure = StructureData()
+# Create a silicon crystal using ASE
+si_ase = bulk('Si', 'diamond', a=5.43)
 
-# Set a reasonable cell (important even for molecules)
-structure.set_cell([
-    [10.0, 0.0, 0.0],
-    [0.0, 10.0, 0.0], 
-    [0.0, 0.0, 10.0]
-])
-
-# Add atoms (positions in Angstroms)
-structure.append_atom(position=[0.0, 0.0, 0.0], symbols='O')
-structure.append_atom(position=[0.757, 0.587, 0.0], symbols='H')
-structure.append_atom(position=[-0.757, 0.587, 0.0], symbols='H')
-
+# Convert to AiiDA structure
+structure = StructureData(ase=si_ase)
 structure.store()
-print(f"Structure created: PK={structure.pk}")
+print(f"Silicon structure created: PK={structure.pk}")
 ```
 
 ## Step 4: Set Up Calculation Parameters
@@ -99,18 +91,18 @@ Define the Fireball calculation parameters using the appropriate namelists:
 ```python
 from aiida import orm
 
-# Basic calculation parameters
+# Basic calculation parameters for silicon
 parameters = {
     'OPTION': {
         'iimage': 1,        # Single point calculation
-        'iquench': 0,       # No optimization
-        'dt': 0.5,          # Time step (not used for single point)
-        'nstepf': 1,        # Number of steps
+        'iquench': 0,       # No geometry optimization
+        'dt': 0.25,         # Time step
+        'nstepf': 1,        # Number of MD steps
+        'ifixcharges': 1,   # Fix atomic charges
     },
     'OUTPUT': {
-        'iwrtpop': 1,       # Write population analysis
         'iwrtdos': 0,       # Don't write DOS
-        'iwrtatom': 1,      # Write atomic information
+        'iwrtxyz': 1,       # Write position trajectory
     }
 }
 
@@ -120,16 +112,16 @@ parameters_node.store()
 
 ## Step 5: Set Up K-points
 
-Even for molecules, we need to specify k-points:
+For silicon crystal, we need a reasonable k-point mesh:
 
 ```python
 from aiida.plugins import DataFactory
 
-KpointsData = DataFactory('kpoints')
+KpointsData = DataFactory('core.array.kpoints')
 
 kpoints = KpointsData()
-# For molecules, we typically use gamma point only
-kpoints.set_kpoints_mesh([1, 1, 1], offset=[0.0, 0.0, 0.0])
+# Use a reasonable k-point mesh for silicon
+kpoints.set_kpoints_mesh([4, 4, 4], offset=[0.0, 0.0, 0.0])
 kpoints.store()
 ```
 
@@ -155,14 +147,14 @@ inputs = {
     'kpoints': kpoints,
     'fdata_remote': fdata_remote,
     'metadata': {
-        'label': 'water_molecule_test',
-        'description': 'First Fireball calculation - water molecule',
+        'label': 'silicon_scf',
+        'description': 'First Fireball calculation - silicon crystal',
         'options': {
             'resources': {
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1,
             },
-            'max_wallclock_seconds': 600,  # 10 minutes
+            'max_wallclock_seconds': 1800,  # 30 minutes
         }
     }
 }
