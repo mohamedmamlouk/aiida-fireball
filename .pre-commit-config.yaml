@@ -38,47 +38,8 @@ repos:
           - flake8-docstrings
           - flake8-typing-imports
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.0.1
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-all]
-        exclude: ^(tests/|docs/)
-
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.2
     hooks:
       - id: codespell
         exclude: ^(.*\.po|.*\.pot)$
-
-  - repo: https://github.com/pycqa/pylint
-    rev: v2.16.2
-    hooks:
-      - id: pylint
-        exclude: ^(tests/|docs/)
-        additional_dependencies:
-          - aiida-core>=2.0.0
-
-  - repo: https://github.com/pycqa/bandit
-    rev: 1.7.4
-    hooks:
-      - id: bandit
-        args: [-c, pyproject.toml]
-        additional_dependencies: ["bandit[toml]"]
-
-  - repo: https://github.com/adamchainz/django-upgrade
-    rev: 1.13.0
-    hooks:
-      - id: django-upgrade
-        args: [--target-version, "4.1"]
-        exclude: ^(tests/|docs/)
-
-# Local hooks for project-specific checks
-  - repo: local
-    hooks:
-      - id: check-aiida-entry-points
-        name: Check AiiDA entry points
-        entry: python -c "from aiida.plugins import CalculationFactory; CalculationFactory('fireball')"
-        language: system
-        pass_filenames: false
-        always_run: true

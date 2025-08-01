@@ -54,7 +54,7 @@ jobs:
 
     - name: Setup AiiDA
       run: |
-        verdi profile setup core.psql_dos --non-interactive --email=test@example.com --first-name=Test --last-name=User --institution=Test --db-hostname=localhost --db-port=5432 --db-name=test_aiida --db-username=postgres --db-password=postgres --broker-protocol=amqp --broker-username=guest --broker-password=guest --broker-host=localhost --broker-port=5672 --broker-virtual-host=/
+        verdi profile setup core.psql_dos --non-interactive --email=test@example.com --first-name=Test --last-name=User --institution=Test --database-hostname=localhost --database-port=5432 --database-name=test_aiida --database-username=postgres --database-password=postgres --broker-protocol=amqp --broker-username=guest --broker-password=guest --broker-host=localhost --broker-port=5672 --broker-virtual-host=/
         verdi profile setdefault core.psql_dos
 
     - name: Run tests

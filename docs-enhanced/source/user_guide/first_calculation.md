@@ -122,7 +122,7 @@ calc = orm.load_node(<PK>)  # Replace <PK> with your calculation's PK
 
 # Check if calculation completed successfully
 if calc.is_finished_ok:
-    print("✅ Calculation completed successfully!")
+    print(" Calculation completed successfully!")
     
     # Access output files
     if 'retrieved' in calc.outputs:
@@ -142,7 +142,7 @@ if calc.is_finished_ok:
         print(f"Final structure available with PK={final_structure.pk}")
         
 else:
-    print("❌ Calculation failed!")
+    print(" Calculation failed!")
     print(f"Exit status: {calc.exit_status}")
     print(f"Exit message: {calc.exit_message}")
 ```
