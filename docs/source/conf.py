@@ -6,6 +6,20 @@ import sys
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath('../../src'))
 
+# Mock imports for ReadTheDocs
+autodoc_mock_imports = [
+    'aiida',
+    'aiida.orm',
+    'aiida.engine',
+    'aiida.plugins',
+    'aiida.parsers',
+    'aiida.calculations',
+    'aiida.common',
+    'numpy',
+    'matplotlib',
+    'pandas',
+]
+
 # -- Project information -----------------------------------------------------
 project = 'AiiDA Fireball'
 copyright = '2025, ValkScripter and mohamedmamlouk'
@@ -38,6 +52,22 @@ source_suffix = ['.rst', '.md']
 
 # The master toctree document
 master_doc = 'index'
+
+# -- MyST Parser configuration -----------------------------------------------
+myst_enable_extensions = [
+    "amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_image",
+    "replacements",
+    "smartquotes",
+    "substitution",
+    "tasklist",
+]
+
+# Disable linkify to avoid installation issues on ReadTheDocs
+myst_linkify_fuzzy_links = False
 
 # -- Options for HTML output ------------------------------------------------
 html_theme = 'sphinx_rtd_theme'

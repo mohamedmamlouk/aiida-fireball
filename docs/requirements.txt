@@ -7,6 +7,9 @@ myst-parser>=0.18.0,<3.0.0
 sphinx-copybutton>=0.5.0
 sphinx-design>=0.3.0
 
+# Required for myst-parser linkify extension
+linkify-it-py>=1.0.0
+
 # API documentation
 sphinx-autodoc-typehints>=1.24.0
 
@@ -16,3 +19,6 @@ sphinxcontrib-napoleon>=0.7
 # Additional dependencies for building docs
 docutils>=0.18.0,<0.20.0
 Jinja2>=3.1.0
+
+# Mock dependencies for ReadTheDocs (since we can't install the full package)
+# This allows Sphinx to build without requiring the actual dependencies
