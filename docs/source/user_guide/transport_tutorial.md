@@ -51,15 +51,18 @@ from aiida.plugins import CalculationFactory
 
 FireballCalculation = CalculationFactory('fireball')
 
-# Basic Fireball parameters
+# Basic Fireball parameters for transport calculations
 basic_parameters = {
     'OPTION': {
-        'iimage': 1,  # Single point calculation
-        'iwrtfpieces': 1,  # Write force components
+        'iimage': 1,         # Single point calculation
+        'iquench': 0,        # No geometry optimization
+        'dt': 0.5,           # Time step (not critical for single point)
+        'nstepf': 1,         # Single step for SCF
     },
     'OUTPUT': {
-        'iwrtpop': 1,  # Write population analysis
-        'iwrttrans': 1,  # Enable transport output
+        'iwrtpop': 1,        # Write population analysis
+        'iwrttrans': 1,      # Enable transport output (essential!)
+        'iwrtatom': 1,       # Write atomic information
     }
 }
 ```
@@ -261,36 +264,6 @@ selective_transport = {
 }
 ```
 
-### Voltage-Dependent Calculations
-
-For I-V curves, vary the bias voltage:
-
-```python
-voltages = [0.0, 0.5, 1.0, 1.5, 2.0]
-calculations = []
-
-for V in voltages:
-    bias_params_V = bias_params.copy()
-    bias_params_V['bias'] = V
-    
-    transport_settings_V = {
-        'TRANSPORT': {
-            'INTERACTION': interaction_params,
-            'ETA': eta_params,
-            'TRANS': trans_params,
-            'BIAS': bias_params_V
-        }
-    }
-    
-    inputs_V = inputs.copy()
-    inputs_V['settings'] = orm.Dict(dict=transport_settings_V)
-    inputs_V['metadata']['label'] = f'transport_V_{V}V'
-    
-    calc_V = submit(FireballCalculation, **inputs_V)
-    calculations.append((V, calc_V))
-    print(f"Submitted V={V}V calculation: PK={calc_V.pk}")
-```
-
 ## Troubleshooting Transport Calculations
 
 ### Common Issues
@@ -337,5 +310,5 @@ if validate_transport_params(transport_settings['TRANSPORT']):
 - {doc}`../reference/calculations`: Detailed API reference
 
 ```{seealso}
-For more advanced transport theory and Fireball-specific details, consult the [Fireball manual](http://fireball-dft.org) and related transport calculation literature.
+For more advanced transport theory and Fireball-specific details, consult the [Fireball manual](https://fireball-qmd.github.io/fireball.html) and related transport calculation literature.
 ```

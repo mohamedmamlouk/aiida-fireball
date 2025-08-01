@@ -119,7 +119,7 @@ If you use this plugin in your research, please cite:
 Also consider citing AiiDA and Fireball:
 
 - [AiiDA](https://aiida.readthedocs.io/projects/aiida-core/en/latest/intro/citing.html)
-- [Fireball DFT](http://fireball-dft.org)
+- [Fireball DFT](https://fireball-qmd.github.io/fireball.html)
 
 ## License
 

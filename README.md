@@ -173,6 +173,47 @@ transport_inputs = {
 calc_node = submit(FireballCalculation, **transport_inputs)
 ```
 
+### 4. Advanced Parallel Calculations
+
+For high-throughput surface calculations with charge state variations:
+
+```python
+# Generate W(110) surface with ASE
+from ase.build import bcc110
+slab = bcc110('W', size=(1,1,15), a=3.1652, vacuum=20.0)
+structure = StructureData(ase=slab)
+
+# Submit parallel calculations for different charge states
+qstates = [0, 0.0078, 0.0156, 0.0233, 0.0311, 0.0389, 0.0467, 0.0545]
+
+for q in qstates:
+    params = {
+        "OPTION": {
+            "nstepi": 1, "nstepf": 5000, "icluster": 0,
+            "iquench": -1, "dt": 0.25, "qstate": q
+        },
+        "OUTPUT": {"iwrtxyz": 0, "iwrtdos": 0}
+    }
+    
+    builder = FireballCalculation.get_builder()
+    builder.code = code
+    builder.structure = structure
+    builder.parameters = Dict(dict=params)
+    builder.fdata_remote = fdata_remote
+    builder.metadata.label = f"W110_q{q}"
+    
+    # HPC optimization
+    builder.metadata.options.prepend_text = """
+# Fix qstate formatting
+sed -i "s/\\(qstate *= *\\)'\\([0-9.]*d0\\)'/\\1\\2/" fireball.in
+"""
+    
+    calc = submit(builder)
+    print(f"qstate={q} → PK={calc.pk}")
+```
+
+See [`examples/submit_qstate_parallel.py`](examples/submit_qstate_parallel.py) for the complete example.
+
 ## Documentation
 
 Full documentation is available at [ReadTheDocs](https://aiida-fireball.readthedocs.io/).
@@ -226,7 +267,7 @@ If you use this plugin in your research, please cite:
 ```bibtex
 @misc{aiida_fireball,
   title={AiiDA Fireball Plugin},
-  author={ValkScripter and mohamedmamlouk},
+  author={mohamedmamlouk},
   year={2024},
   url={https://github.com/mohamedmamlouk/aiida-fireball}
 }

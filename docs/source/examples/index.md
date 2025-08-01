@@ -11,7 +11,28 @@ A simple single-point energy calculation for a water molecule:
 ```{literalinclude} ../../../examples/basic_calculation.py
 :language: python
 :caption: Basic single-point calculation
+:lines: 1-25
 ```
+
+## Advanced Examples
+
+### Parallel High-Throughput Calculations
+
+Advanced parallel submission for surface calculations with charge state scanning:
+
+```{literalinclude} ../../../examples/submit_qstate_parallel.py
+:language: python
+:caption: Parallel qstate calculations for W(110) surface
+:lines: 1-35
+```
+
+**Key Features:**
+- ASE integration for surface generation
+- Parallel submission of multiple charge states
+- HPC cluster optimization
+- System-level fixes with prepend_text
+
+For complete explanation, see {doc}`../user_guide/advanced_parallel`.
 
 ### Geometry Optimization  
 

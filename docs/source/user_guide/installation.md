@@ -26,7 +26,7 @@ For detailed AiiDA installation instructions, see the [AiiDA documentation](http
 
 You need a working installation of the Fireball code. Download and compile Fireball:
 
-1. Visit the [Fireball website](http://fireball-dft.org)
+1. Visit the [Fireball website](https://fireball-qmd.github.io/fireball.html)
 2. Download the source code
 3. Follow the compilation instructions for your system
 4. Ensure the `fireball.x` executable is in your PATH or note its location
@@ -74,7 +74,7 @@ pip install git+https://github.com/ValkScripter/aiida-fireball.git
 For plugin development:
 
 ```bash
-git clone https://github.com/ValkScripter/aiida-fireball.git
+git clone https://github.com/mohamedmamlouk/aiida-fireball.git
 cd aiida-fireball
 pip install -e .
 ```
@@ -141,37 +141,14 @@ Provide:
 
 ## Fdata Files Setup
 
-Fireball requires Fdata files containing pseudopotentials and basis sets.
+Fireball requires Fdata files containing pseudopotentials and basis sets. These files are typically provided by your system administrator or can be downloaded from the Fireball community.
 
-### 1. Download Fdata Files
+### Using setup_fdata.py Helper
 
-Download the Fdata files from the Fireball website or obtain them from your system administrator.
-
-### 2. Organize Fdata Directory
-
-Create a directory structure like:
-
-```
-/path/to/fdata/
-├── C/
-│   ├── C.pp
-│   └── C.na
-├── H/
-│   ├── H.pp
-│   └── H.na
-├── O/
-│   ├── O.pp
-│   └── O.na
-└── ...
-```
-
-Each element should have its own subdirectory containing the `.pp` (pseudopotential) and `.na` (numerical atomic orbitals) files.
-
-### 3. Register Fdata with AiiDA
-
-Create a RemoteData node pointing to your Fdata directory:
+Use the provided helper script to set up Fdata files:
 
 ```python
+# See examples/setup_fdata.py for a complete setup script
 from aiida import orm
 
 computer = orm.load_computer('localhost')
@@ -183,44 +160,147 @@ fdata_remote.store()
 print(f"Fdata registered with PK: {fdata_remote.pk}")
 ```
 
-## Verification
+## AiiDA Core Configuration
 
-### Test Basic Functionality
+### Basic AiiDA Setup
 
-Create a simple test script to verify everything works:
+If you need to configure AiiDA from scratch:
+
+```bash
+# Initialize AiiDA database
+verdi quicksetup
+
+# Start the daemon
+verdi daemon start
+
+# Check status
+verdi status
+```
+
+### HPC Cluster Configuration
+
+#### SLURM Configuration
+
+For SLURM-based clusters:
+
+```bash
+verdi computer setup
+```
+
+Provide the following information:
+- **Computer name**: `hpc_cluster`
+- **Hostname**: `your.cluster.hostname`
+- **Transport type**: `core.ssh`
+- **Scheduler**: `core.slurm`
+- **Work directory**: `/scratch/$USER/aiida_work/`
+
+Then configure SSH connection:
+
+```bash
+verdi computer configure core.ssh hpc_cluster
+```
+
+Example SLURM configuration:
 
 ```python
 from aiida import orm
-from aiida.plugins import CalculationFactory, DataFactory
 
-# Test plugin loading
-FireballCalculation = CalculationFactory('fireball')
-print("✓ Fireball calculation plugin loaded successfully")
-
-# Test structure creation
-StructureData = DataFactory('structure')
-structure = StructureData()
-structure.set_cell([[10, 0, 0], [0, 10, 0], [0, 0, 10]])
-structure.append_atom(position=[0, 0, 0], symbols='H')
-structure.append_atom(position=[0.74, 0, 0], symbols='H')
-print("✓ Structure creation works")
-
-# Test code loading
-try:
-    code = orm.load_code('fireball@localhost')
-    print("✓ Fireball code configured correctly")
-except:
-    print("✗ Fireball code not found - check your code setup")
-
-print("\nInstallation verification complete!")
+computer = orm.Computer(
+    label='hpc_slurm',
+    hostname='cluster.university.edu',
+    transport_type='core.ssh',
+    scheduler_type='core.slurm'
+)
+computer.set_workdir('/scratch/{username}/aiida_work/')
+computer.store()
 ```
 
-### Run the Test
+#### TORQUE Configuration
 
-Save the script as `test_installation.py` and run:
+For TORQUE/PBS clusters:
 
 ```bash
-python test_installation.py
+verdi computer setup
+```
+
+Configuration:
+- **Scheduler**: `core.torque`
+- **Transport**: `core.ssh`
+
+Example TORQUE setup:
+
+```python
+computer = orm.Computer(
+    label='hpc_torque', 
+    hostname='pbs.cluster.edu',
+    transport_type='core.ssh',
+    scheduler_type='core.torque'
+)
+computer.set_workdir('/home/{username}/aiida_work/')
+computer.store()
+```
+
+### Remote Computer Code Setup
+
+Register Fireball on remote cluster:
+
+```bash
+verdi code setup
+```
+
+Configuration:
+- **Label**: `fireball@hpc_cluster`
+- **Default input plugin**: `fireball`
+- **Computer**: `hpc_cluster`
+- **Filepath executable**: `/usr/local/bin/fireball.x`
+
+Or programmatically:
+
+```python
+code = orm.Code(
+    input_plugin_name='fireball',
+    remote_computer_exec=[computer, '/path/to/fireball/on/cluster']
+)
+code.label = 'fireball-mpi'
+code.description = 'Fireball on HPC cluster'
+code.store()
+```
+
+## Verification
+
+### Test Plugin Installation
+
+```python
+from aiida.plugins import CalculationFactory
+
+# Test plugin loading
+try:
+    FireballCalculation = CalculationFactory('fireball')
+    print("✓ Fireball calculation plugin loaded successfully")
+except ImportError:
+    print("✗ Plugin not found - check installation")
+
+# List available plugins
+import subprocess
+result = subprocess.run(['verdi', 'plugin', 'list', 'aiida.calculations'], 
+                       capture_output=True, text=True)
+if 'fireball' in result.stdout:
+    print("✓ Fireball plugin registered correctly")
+else:
+    print("✗ Plugin not registered")
+```
+
+### Test Computer and Code
+
+```bash
+# Test computer connection
+verdi computer test hpc_cluster
+
+# List configured codes
+verdi code list
+
+# Test code accessibility
+verdi code show fireball@hpc_cluster
 ```
 
 ## Troubleshooting
