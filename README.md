@@ -3,10 +3,11 @@
 ![Fireball Structure](docs/source/_static/fireball_structure.png)
 
 [![Build Status](https://github.com/mohamedmamlouk/aiida-fireball/workflows/ci/badge.svg)](https://github.com/mohamedmamlouk/aiida-fireball/actions)
-[![Coverage Status](https://coveralls.io/repos/github/mohamedmamlouk/aiida-fireball/badge.svg?branch=main)](https://coveralls.io/github/mohamedmamlouk/aiida-fireball?branch=main)
-[![PyPI version](https://badge.fury.io/py/aiida-fireball.svg)](https://badge.fury.io/py/aiida-fireball)
-[![Python version](https://img.shields.io/pypi/pyversions/aiida-fireball.svg)](https://pypi.org/project/aiida-fireball)
+[![codecov](https://codecov.io/gh/mohamedmamlouk/aiida-fireball/branch/main/graph/badge.svg)](https://codecov.io/gh/mohamedmamlouk/aiida-fireball)
+[![PyPI version](https://img.shields.io/pypi/v/aiida-fireball.svg)](https://pypi.org/project/aiida-fireball/)
+[![Python versions](https://img.shields.io/pypi/pyversions/aiida-fireball.svg)](https://pypi.org/project/aiida-fireball/)
 [![Documentation Status](https://readthedocs.org/projects/aiida-fireball/badge/?version=latest)](https://aiida-fireball.readthedocs.io/en/latest/?badge=latest)
+[![License](https://img.shields.io/github/license/mohamedmamlouk/aiida-fireball.svg)](https://github.com/mohamedmamlouk/aiida-fireball/blob/main/LICENSE)
 
 **AiiDA plugin for Fireball semi-empirical DFT calculations** - Simple, efficient, and well-integrated with the AiiDA ecosystem.
 
