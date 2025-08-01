@@ -3,7 +3,6 @@
 ![Fireball Structure](docs/source/_static/fireball_structure.png)
 
 [![Build Status](https://github.com/mohamedmamlouk/aiida-fireball/workflows/ci/badge.svg)](https://github.com/mohamedmamlouk/aiida-fireball/actions)
-[![codecov](https://codecov.io/gh/mohamedmamlouk/aiida-fireball/branch/main/graph/badge.svg)](https://codecov.io/gh/mohamedmamlouk/aiida-fireball)
 [![PyPI version](https://img.shields.io/pypi/v/aiida-fireball.svg)](https://pypi.org/project/aiida-fireball/)
 [![Python versions](https://img.shields.io/pypi/pyversions/aiida-fireball.svg)](https://pypi.org/project/aiida-fireball/)
 [![Documentation Status](https://readthedocs.org/projects/aiida-fireball/badge/?version=latest)](https://aiida-fireball.readthedocs.io/en/latest/?badge=latest)
