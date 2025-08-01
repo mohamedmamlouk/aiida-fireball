@@ -1,4 +1,9 @@
-# version: 2
+# .readthedocs.yaml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
 
 # Set the version of Python and other tools you want to use
 build:
@@ -10,20 +15,14 @@ build:
       # Install any conda packages you are using
       - python -m pip install --upgrade --no-cache-dir pip setuptools
     post_install:
-      # Install the package in development mode
-      - python -m pip install -e .
       # Install docs dependencies
       - python -m pip install -r docs/requirements.txt
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
    configuration: docs/source/conf.py
-   builder: html
-   fail_on_warning: false
 
 # Optionally set the version of Python and requirements file to use
 python:
    install:
-   - method: pip
-     path: .
    - requirements: docs/requirements.txt

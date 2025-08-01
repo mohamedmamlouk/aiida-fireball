@@ -34,10 +34,7 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # Source file suffixes
-source_suffix = {
-    '.rst': None,
-    '.md': 'myst_parser',
-}
+source_suffix = ['.rst', '.md']
 
 # The master toctree document
 master_doc = 'index'
