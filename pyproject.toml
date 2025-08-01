@@ -74,6 +74,7 @@ docs = [
     "myst-parser>=0.17.0",
     "sphinx-copybutton>=0.5.0",
     "sphinxcontrib-details-directive",
+    "linkify-it-py",
 ]
 testing = [
     "pytest>=6.0",

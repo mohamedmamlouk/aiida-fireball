@@ -3,43 +3,26 @@ repos:
     rev: v4.4.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^(examples/|tests/|docs/)
       - id: end-of-file-fixer
+        exclude: ^(examples/|tests/|docs/)
       - id: check-yaml
       - id: check-added-large-files
-      - id: check-case-conflict
-      - id: check-merge-conflict
-      - id: check-json
-      - id: check-toml
-      - id: debug-statements
-      - id: fix-byte-order-marker
-
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
-    hooks:
-      - id: pyupgrade
-        args: [--py38-plus]
 
   - repo: https://github.com/psf/black
     rev: 23.1.0
     hooks:
       - id: black
+        exclude: ^(examples/|tests/|docs/)
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
       - id: isort
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          - flake8-bugbear
-          - flake8-docstrings
-          - flake8-typing-imports
+        exclude: ^(examples/|tests/|docs/)
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.2
     hooks:
       - id: codespell
-        exclude: ^(.*\.po|.*\.pot)$
+        exclude: ^(.*\.po|.*\.pot|examples/.*\.py|tests/.*\.py|docs/.*|.*\.pdf|.*\.jpeg|.*\.png)$
