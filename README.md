@@ -1,23 +1,22 @@
 # AiiDA Fireball Plugin
 
-[![Build Status](https://github.com/yourusername/aiida-fireball/workflows/ci/badge.svg)](https://github.com/yourusername/aiida-fireball/actions)
-[![Coverage Status](https://coveralls.io/repos/github/yourusername/aiida-fireball/badge.svg?branch=main)](https://coveralls.io/github/yourusername/aiida-fireball?branch=main)
+![Fireball Structure](docs/source/_static/fireball_structure.png)
+
+[![Build Status](https://github.com/mohamedmamlouk/aiida-fireball/workflows/ci/badge.svg)](https://github.com/mohamedmamlouk/aiida-fireball/actions)
+[![Coverage Status](https://coveralls.io/repos/github/mohamedmamlouk/aiida-fireball/badge.svg?branch=main)](https://coveralls.io/github/mohamedmamlouk/aiida-fireball?branch=main)
 [![PyPI version](https://badge.fury.io/py/aiida-fireball.svg)](https://badge.fury.io/py/aiida-fireball)
 [![Python version](https://img.shields.io/pypi/pyversions/aiida-fireball.svg)](https://pypi.org/project/aiida-fireball)
+[![Documentation Status](https://readthedocs.org/projects/aiida-fireball/badge/?version=latest)](https://aiida-fireball.readthedocs.io/en/latest/?badge=latest)
 
-AiiDA plugin for the Fireball semi-empirical DFT-based electronic structure code with advanced transport calculations.
+**AiiDA plugin for Fireball semi-empirical DFT calculations** - Simple, efficient, and well-integrated with the AiiDA ecosystem.
 
-## Features
+## 🚀 Key Features
 
-- **Fireball Calculations**: Full support for semi-empirical DFT calculations
-- **Transport Properties**: Advanced transport calculations with optional files
-  - `interaction.optional` - Interaction parameters
-  - `eta.optional` - Eta parameters  
-  - `trans.optional` - Transport parameters
-  - `bias.optional` - Bias voltage parameters
-- **Flexible Input Generation**: Generate any combination of optional transport files
-- **Birch-Murnaghan Fitting**: Automated equation of state calculations
-- **AiiDA Integration**: Full compatibility with AiiDA 2.0+ ecosystem
+- **Full Fireball Integration**: Complete support for semi-empirical DFT calculations
+- **Advanced Transport**: State-of-the-art transport property calculations
+- **Simple API**: Easy-to-use interface similar to AiiDA Quantum ESPRESSO
+- **High-Throughput Ready**: Designed for large-scale computational studies
+- **Well Documented**: Comprehensive documentation with examples
 
 ## Installation
 
@@ -48,56 +47,50 @@ verdi plugin list aiida.calculations
 # Should show: fireball
 ```
 
-## Quick Start
+## 📖 Quick Start
 
-### 1. Set up Computer and Code
+Get up and running in minutes! Here's a simple silicon calculation:
 
 ```python
-from aiida import orm
+from ase.build import bulk
+from aiida.plugins import DataFactory, CalculationFactory
 from aiida.engine import submit
+from aiida import orm
 
-# Create computer
-computer = orm.Computer(
-    label='localhost',
-    hostname='localhost',
-    transport_type='local',
-    scheduler_type='direct'
-)
-computer.store()
-computer.configure()
+# Create silicon structure with ASE
+StructureData = DataFactory('core.structure')
+si_ase = bulk('Si', 'diamond', a=5.43)
+structure = StructureData(ase=si_ase)
 
-# Create code
-code = orm.Code(
-    input_plugin_name='fireball',
-    remote_computer_exec=[computer, '/path/to/fireball.x']
+# Basic parameters
+parameters = orm.Dict({
+    'OPTION': {
+        'iimage': 1,        # Single point calculation
+        'iquench': 0,       # No optimization
+        'dt': 0.25,         # Time step
+        'nstepf': 1,        # Number of steps
+    },
+    'OUTPUT': {
+        'iwrtpop': 1,       # Write population analysis
+        'iwrtdos': 0,       # Don't write DOS
+    }
+})
+
+# Submit calculation
+FireballCalculation = CalculationFactory('fireball')
+calc_node = submit(FireballCalculation,
+    code=orm.load_code('fireball@localhost'),
+    structure=structure,
+    parameters=parameters,
+    kpoints=kpoints,  # 4x4x4 mesh
+    fdata_remote=fdata_remote,
+    metadata={'options': {'resources': {'num_machines': 1}}}
 )
-code.label = 'fireball-v3.0'
-code.store()
+
+print(f"Calculation submitted: PK={calc_node.pk}")
 ```
 
-### 2. Basic Calculation
-
-```python
-from aiida.plugins import CalculationFactory, DataFactory
-from aiida.engine import submit
-
-# Load plugins
-FireballCalculation = CalculationFactory('fireball')
-StructureData = DataFactory('structure')
-
-# Create structure (example: H2 molecule)
-structure = StructureData()
-structure.set_cell([[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 10.0]])
-structure.append_atom(position=[0.0, 0.0, 0.0], symbols='H')
-structure.append_atom(position=[0.74, 0.0, 0.0], symbols='H')
-
-# Set up inputs
-inputs = {
-    'code': code,
-    'structure': structure,
-    'metadata': {
-        'options': {
-            'resources': {'num_machines': 1},
+For detailed tutorials, see our [**📚 Documentation**](https://aiida-fireball.readthedocs.io/).
             'max_wallclock_seconds': 1800,
         }
     }
