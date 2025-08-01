@@ -273,3 +273,4 @@ If you use this plugin in your research, please cite:
 - Issues: https://github.com/mohamedmamlouk/aiida-fireball/issues
 - Discussions: https://github.com/mohamedmamlouk/aiida-fireball/discussions
 - AiiDA Community: https://aiida.net/
+# Status check
