@@ -1,52 +1,652 @@
-/* Custom CSS for AiiDA Fireball Documentation */
+/* Advanced CSS for AiiDA Fireball Documentation - Ultra Modern Design */
 
-/* Hero section styling */
+/* Global animations and effects */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --tertiary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --neon-blue: #00d4ff;
+    --neon-purple: #b347d9;
+    --dark-bg: #0f0f23;
+    --glass-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* Body and global styling */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(-45deg, #0f0f23, #1a1a2e, #16213e, #0f3460);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    color: #ffffff;
+    overflow-x: hidden;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Floating particles background */
+.content::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, var(--neon-blue), transparent),
+        radial-gradient(2px 2px at 40px 70px, var(--neon-purple), transparent),
+        radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+        radial-gradient(1px 1px at 130px 80px, var(--neon-blue), transparent);
+    background-repeat: repeat;
+    background-size: 200px 100px;
+    animation: float 20s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.3;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) translateX(0px); }
+    33% { transform: translateY(-30px) translateX(10px); }
+    66% { transform: translateY(-60px) translateX(-10px); }
+    100% { transform: translateY(-100vh) translateX(0px); }
+}
+
+/* Hero section with glass morphism */
 .hero-image {
-    border-radius: 15px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    background: var(--glass-bg);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     margin: 2rem 0;
-    transition: transform 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-image::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: all 0.6s;
+}
+
+.hero-image:hover::before {
+    left: 100%;
 }
 
 .hero-image:hover {
-    transform: scale(1.02);
+    transform: scale(1.05) rotateY(5deg);
+    box-shadow: 
+        0 20px 60px rgba(0, 212, 255, 0.3),
+        0 0 50px rgba(179, 71, 217, 0.2);
 }
 
-/* Feature grid styling */
+/* Advanced feature cards with 3D effects */
 .feature-grid .feature-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
     color: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    border: none;
-    transition: all 0.3s ease;
+    border-radius: 20px;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    transform-style: preserve-3d;
+}
+
+.feature-grid .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--primary-gradient);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 20px;
+    z-index: -1;
+}
+
+.feature-grid .feature-card:hover::before {
+    opacity: 0.8;
 }
 
 .feature-grid .feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
+    transform: translateY(-10px) translateZ(20px) rotateX(5deg);
+    box-shadow: 
+        0 25px 50px rgba(0, 0, 0, 0.3),
+        0 0 50px rgba(102, 126, 234, 0.4);
+    border-color: var(--neon-blue);
 }
 
-/* Main feature cards */
+/* Sophisticated main feature cards */
 .getting-started-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
     color: white;
-    border-radius: 15px;
+    border-radius: 25px;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.getting-started-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--primary-gradient);
+    opacity: 0.1;
     transition: all 0.3s ease;
+}
+
+.getting-started-card:hover::before {
+    opacity: 0.9;
 }
 
 .transport-card {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
     color: white;
-    border-radius: 15px;
+    border-radius: 25px;
+    border: 1px solid rgba(240, 147, 251, 0.3);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.transport-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--secondary-gradient);
+    opacity: 0.1;
     transition: all 0.3s ease;
 }
 
+.transport-card:hover::before {
+    opacity: 0.9;
+}
+
 .workflows-card {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
     color: white;
-    border-radius: 15px;
+    border-radius: 25px;
+    border: 1px solid rgba(79, 172, 254, 0.3);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.workflows-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--tertiary-gradient);
+    opacity: 0.1;
     transition: all 0.3s ease;
+}
+
+.workflows-card:hover::before {
+    opacity: 0.9;
+}
+
+/* Enhanced hover effects for all main cards */
+.getting-started-card:hover,
+.transport-card:hover,
+.workflows-card:hover {
+    transform: translateY(-15px) scale(1.03);
+    box-shadow: 
+        0 30px 80px rgba(0, 0, 0, 0.4),
+        0 0 60px rgba(102, 126, 234, 0.3);
+}
+
+/* Neon glow buttons */
+.btn-primary {
+    background: var(--primary-gradient);
+    border: none;
+    border-radius: 50px;
+    padding: 12px 30px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: all 0.6s;
+}
+
+.btn-primary:hover::before {
+    left: 100%;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 10px 30px rgba(102, 126, 234, 0.5),
+        0 0 40px rgba(179, 71, 217, 0.3);
+}
+
+/* Advanced typography */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffffff, #b3b3ff);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+}
+
+/* Code blocks with syntax highlighting effect */
+code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 8px;
+    padding: 2px 8px;
+    color: var(--neon-blue);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+pre {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+pre::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--primary-gradient);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark-bg);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-gradient);
+    border-radius: 10px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-gradient);
+}
+
+/* Loading animation for interactive elements */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+}
+
+.pulse-animation {
+    animation: pulse 2s infinite;
+}
+
+/* Advanced link styling */
+a {
+    color: var(--neon-blue);
+    text-decoration: none;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px;
+    left: 0;
+    background: var(--primary-gradient);
+    transition: width 0.3s ease;
+}
+
+a:hover::after {
+    width: 100%;
+}
+
+a:hover {
+    color: var(--neon-purple);
+    text-shadow: 0 0 10px rgba(179, 71, 217, 0.5);
+}
+
+/* Mobile responsiveness with enhanced effects */
+@media (max-width: 768px) {
+    body {
+        background-size: 200% 200%;
+    }
+    
+    .content::before {
+        background-size: 100px 50px;
+    }
+    
+    .hero-image:hover {
+        transform: scale(1.02) rotateY(2deg);
+    }
+    
+    .feature-grid .feature-card:hover {
+        transform: translateY(-5px) translateZ(10px);
+    }
+    
+    .getting-started-card:hover,
+    .transport-card:hover,
+    .workflows-card:hover {
+        transform: translateY(-8px) scale(1.01);
+    }
+}
+
+/* Dark theme enhancements */
+.rst-content {
+    background: transparent;
+}
+
+.wy-nav-content-wrap {
+    background: transparent;
+}
+
+.wy-nav-content {
+    background: transparent;
+}
+
+/* Advanced holographic effects */
+.holographic-border {
+    position: relative;
+    background: linear-gradient(45deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+    background-size: 300% 300%;
+    animation: holographicShift 4s ease infinite;
+}
+
+@keyframes holographicShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Quantum particle system background */
+.quantum-particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -2;
+    overflow: hidden;
+}
+
+.quantum-particles::before,
+.quantum-particles::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: radial-gradient(circle, var(--neon-blue), transparent);
+    border-radius: 50%;
+    animation: quantumFloat 15s linear infinite;
+}
+
+.quantum-particles::before {
+    top: -10px;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.quantum-particles::after {
+    top: -10px;
+    left: 80%;
+    animation-delay: 7s;
+}
+
+@keyframes quantumFloat {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Ultra-modern glassmorphism cards */
+.glass-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.glass-card:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(0, 212, 255, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        0 0 40px rgba(0, 212, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Neon text effects */
+.neon-text {
+    color: var(--neon-blue);
+    text-shadow: 
+        0 0 5px var(--neon-blue),
+        0 0 10px var(--neon-blue),
+        0 0 15px var(--neon-blue),
+        0 0 20px var(--neon-blue);
+    animation: neonPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes neonPulse {
+    from {
+        text-shadow: 
+            0 0 5px var(--neon-blue),
+            0 0 10px var(--neon-blue),
+            0 0 15px var(--neon-blue),
+            0 0 20px var(--neon-blue);
+    }
+    to {
+        text-shadow: 
+            0 0 10px var(--neon-blue),
+            0 0 20px var(--neon-blue),
+            0 0 30px var(--neon-blue),
+            0 0 40px var(--neon-blue);
+    }
+}
+
+/* Interactive hover zones */
+.interactive-zone {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.interactive-zone::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background: linear-gradient(45deg, var(--neon-blue), var(--neon-purple), var(--neon-blue));
+    background-size: 300% 300%;
+    border-radius: 25px;
+    opacity: 0;
+    z-index: -1;
+    animation: colorShift 3s ease infinite;
+    transition: opacity 0.3s ease;
+}
+
+.interactive-zone:hover::before {
+    opacity: 0.3;
+}
+
+@keyframes colorShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Advanced button effects */
+.quantum-button {
+    position: relative;
+    background: linear-gradient(135deg, var(--primary-gradient));
+    border: none;
+    border-radius: 50px;
+    padding: 15px 30px;
+    color: white;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.4);
+}
+
+.quantum-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: all 0.6s;
+}
+
+.quantum-button:hover::before {
+    left: 100%;
+}
+
+.quantum-button:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 
+        0 15px 50px rgba(102, 126, 234, 0.6),
+        0 0 50px rgba(179, 71, 217, 0.3);
+}
+
+.quantum-button:active {
+    transform: translateY(-1px) scale(1.02);
+}
+
+/* Responsive quantum design */
+@media (max-width: 1024px) {
+    .quantum-particles::before,
+    .quantum-particles::after {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        background-size: 300% 300%;
+        animation-duration: 10s;
+    }
+    
+    .content::before {
+        background-size: 150px 75px;
+        animation-duration: 15s;
+    }
+    
+    .hero-image:hover {
+        transform: scale(1.02);
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .quantum-button:hover {
+        transform: translateY(-2px) scale(1.02);
+    }
+}
+
+/* Ultra-smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Advanced selection styling */
+::selection {
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    color: white;
+    text-shadow: none;
+}
+
+::-moz-selection {
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    color: white;
+    text-shadow: none;
+}
+
+.workflows-card:hover::before {
+    opacity: 0.9;
 }
 
 .integration-card {
