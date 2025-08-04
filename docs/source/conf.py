@@ -32,15 +32,9 @@ version = '1.0.0'
 # -- General configuration ---------------------------------------------------
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
+    'sphinx.ext.napoleon',
     'myst_parser',
-    'sphinx_copybutton',
-    'sphinx.ext.todo',
 ]
 
 templates_path = ['_templates']
