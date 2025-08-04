@@ -92,7 +92,6 @@ html_short_title = project
 # Add custom CSS
 html_css_files = [
     'custom.css',
-    'modern.css',
 ]
 
 # -- Extension configuration -------------------------------------------------
