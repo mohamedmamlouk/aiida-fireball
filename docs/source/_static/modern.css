@@ -13,21 +13,18 @@
     --glass-bg: rgba(255, 255, 255, 0.1);
 }
 
-/* Body and global styling - Improved visibility */
+/* Body and global styling - Simplified for better readability */
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(-45deg, #1a1a2e, #16213e, #0f3460, #1a1a2e);
-    background-size: 400% 400%;
-    animation: gradientShift 15s ease infinite;
+    background: #1a1a2e;
     color: #ffffff !important;
     overflow-x: hidden;
 }
 
 /* Main content container with better readability */
 .wy-nav-content {
-    background: rgba(0, 0, 0, 0.6) !important;
-    backdrop-filter: blur(15px);
-    border-radius: 20px;
+    background: #2a2a3e !important;
+    border-radius: 15px;
     margin: 1rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 2rem;
@@ -47,17 +44,10 @@ body {
 /* Override any theme colors that might hide text */
 p, div, span, li, td, th, .rst-content p, .rst-content div, .rst-content span {
     color: #e0e0e0 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    line-height: 1.6;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    color: #ffffff !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-/* Make sure content is visible */
-.document {
-    background: transparent;
     color: #ffffff !important;
 }
 
@@ -132,126 +122,90 @@ h1, h2, h3, h4, h5, h6 {
         0 0 50px rgba(179, 71, 217, 0.2);
 }
 
-/* Advanced feature cards with 3D effects */
+/* Simplified feature cards with better readability */
 .feature-grid .feature-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    color: white;
-    border-radius: 20px;
+    background: #3a3a4e !important;
+    color: white !important;
+    border-radius: 15px;
     padding: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    overflow: hidden;
-    transform-style: preserve-3d;
-}
-
-.feature-grid .feature-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--primary-gradient);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    border-radius: 20px;
-    z-index: -1;
-}
-
-.feature-grid .feature-card:hover::before {
-    opacity: 0.8;
+    border: 2px solid #4a4a6e;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .feature-grid .feature-card:hover {
-    transform: translateY(-10px) translateZ(20px) rotateX(5deg);
-    box-shadow: 
-        0 25px 50px rgba(0, 0, 0, 0.3),
-        0 0 50px rgba(102, 126, 234, 0.4);
-    border-color: var(--neon-blue);
+    transform: translateY(-5px);
+    border-color: #667eea;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
 }
 
-/* Sophisticated main feature cards */
+.feature-grid .feature-card p,
+.feature-grid .feature-card div,
+.feature-grid .feature-card span {
+    color: #e0e0e0 !important;
+}
+
+/* Simplified main feature cards */
 .getting-started-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    color: white;
-    border-radius: 25px;
-    border: 1px solid rgba(102, 126, 234, 0.3);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    overflow: hidden;
-}
-
-.getting-started-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--primary-gradient);
-    opacity: 0.1;
+    background: #667eea !important;
+    color: white !important;
+    border-radius: 15px;
     transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
-.getting-started-card:hover::before {
-    opacity: 0.9;
+.getting-started-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
 }
 
 .transport-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    color: white;
-    border-radius: 25px;
-    border: 1px solid rgba(240, 147, 251, 0.3);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    overflow: hidden;
-}
-
-.transport-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--secondary-gradient);
-    opacity: 0.1;
+    background: #f093fb !important;
+    color: white !important;
+    border-radius: 15px;
     transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
 }
 
-.transport-card:hover::before {
-    opacity: 0.9;
+.transport-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(240, 147, 251, 0.5);
 }
 
 .workflows-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    color: white;
-    border-radius: 25px;
-    border: 1px solid rgba(79, 172, 254, 0.3);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    overflow: hidden;
-}
-
-.workflows-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--tertiary-gradient);
-    opacity: 0.1;
+    background: #4facfe !important;
+    color: white !important;
+    border-radius: 15px;
     transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
 }
 
-.workflows-card:hover::before {
-    opacity: 0.9;
+.workflows-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(79, 172, 254, 0.5);
+}
+
+/* Ensure text is visible in cards */
+.getting-started-card p,
+.getting-started-card div,
+.getting-started-card span,
+.transport-card p,
+.transport-card div,
+.transport-card span,
+.workflows-card p,
+.workflows-card div,
+.workflows-card span {
+    color: #ffffff !important;
+}
+
+.getting-started-card h3,
+.transport-card h3,
+.workflows-card h3 {
+    color: #ffffff !important;
+    font-weight: 700;
 }
 
 /* Enhanced hover effects for all main cards */
@@ -309,23 +263,26 @@ h1, h2, h3, h4, h5, h6 {
     text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
 }
 
-/* Specific heading colors for better visibility */
+/* Simplified typography */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    color: #ffffff !important;
+}
+
 h1 {
-    background: linear-gradient(135deg, #ffffff, #00d4ff);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: brightness(1.2);
+    color: #00d4ff !important;
+    font-size: 2.5rem;
 }
 
 h2 {
-    color: #00d4ff !important;
-    text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+    color: #667eea !important;
+    font-size: 2rem;
 }
 
 h3 {
-    color: #b347d9 !important;
-    text-shadow: 0 0 15px rgba(179, 71, 217, 0.5);
+    color: #f093fb !important;
+    font-size: 1.5rem;
 }
 
 /* Ensure all text is visible */
@@ -334,38 +291,35 @@ h3 {
 .rst-content .section span,
 .rst-content .section li {
     color: #e0e0e0 !important;
-    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    font-size: 1rem;
+    line-height: 1.6;
 }
 
-/* Code blocks with better visibility */
+/* Simple code blocks */
 code {
     font-family: 'JetBrains Mono', monospace;
-    background: rgba(0, 212, 255, 0.2) !important;
-    border: 1px solid rgba(0, 212, 255, 0.5);
-    border-radius: 8px;
-    padding: 2px 8px;
+    background: #3a3a4e !important;
+    border: 1px solid #4a4a6e;
+    border-radius: 5px;
+    padding: 2px 6px;
     color: #00d4ff !important;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
-    font-weight: 500;
+    font-size: 0.9rem;
 }
 
 pre {
-    background: rgba(0, 0, 0, 0.4) !important;
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(0, 212, 255, 0.3);
-    border-radius: 15px;
-    padding: 1.5rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    position: relative;
-    overflow: hidden;
+    background: #2a2a3e !important;
+    border: 1px solid #4a4a6e;
+    border-radius: 10px;
+    padding: 1rem;
     color: #ffffff !important;
+    overflow-x: auto;
 }
 
 pre code {
     background: transparent !important;
     border: none;
     color: #ffffff !important;
-    box-shadow: none;
+    padding: 0;
 }
 
 pre::before {
