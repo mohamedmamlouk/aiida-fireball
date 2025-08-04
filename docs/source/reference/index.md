@@ -160,4 +160,4 @@ The plugin defines custom exceptions for error handling and provides detailed er
 - Transport parameter validation errors
 - Calculation convergence problems
 
-For detailed examples and tutorials, see the [User Guide](../user_guide/index.md) and [Examples](../examples/index.md) sections.
+For detailed examples and tutorials, see the [User Guide](../user_guide/index.md) section.

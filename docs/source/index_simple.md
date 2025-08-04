@@ -45,11 +45,17 @@ calc_node = submit(FireballCalculation, **inputs)
 :maxdepth: 2
 
 user_guide/installation
-user_guide/first_calculation
+user_guide/get_started
 user_guide/transport_tutorial
 user_guide/workflows
-examples/index
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Reference
+
 reference/index
+```
 ```
 
 ## Support

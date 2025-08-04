@@ -285,7 +285,7 @@ Now that you've run your first calculation, you can:
 
 - {doc}`optimization_tutorial`: Learn about geometry optimization
 - {doc}`transport_tutorial`: Explore transport calculations  
-- {doc}`../examples/index`: Try more complex examples
+- {doc}`transport_tutorial`: Learn advanced transport calculations
 - {doc}`workflows`: Use automated workflows
 
 ## Script Summary

@@ -366,7 +366,7 @@ After successful installation:
 
 1. {doc}`user_guide/first_calculation`: Run your first Fireball calculation
 2. {doc}`user_guide/transport_tutorial`: Learn about transport calculations
-3. {doc}`examples/index`: Explore example calculations
+3. {doc}`get_started`: Start your first calculation
 
 ## Development Setup
 

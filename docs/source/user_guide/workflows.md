@@ -486,7 +486,7 @@ def report_progress(self):
 
 ## Next Steps
 
-- {doc}`../examples/index`: Explore workflow examples
+- {doc}`transport_tutorial`: Learn about transport calculations
 - {doc}`../reference/index`: Detailed API documentation
 - [AiiDA workflows documentation](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/workflows/index.html)
 

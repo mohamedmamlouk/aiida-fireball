@@ -77,9 +77,18 @@ Get started with AiiDA Fireball in just a few steps:
 :caption: User Guide
 
 user_guide/installation
-user_guide/first_calculation
+user_guide/get_started
 user_guide/transport_tutorial
+user_guide/advanced_parallel
 user_guide/workflows
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Reference
+
+reference/index
+```
 ```
 
 ```{toctree}

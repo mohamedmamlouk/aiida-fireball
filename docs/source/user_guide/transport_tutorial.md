@@ -306,7 +306,7 @@ if validate_transport_params(transport_settings['TRANSPORT']):
 ## Next Steps
 
 - {doc}`workflows`: Learn about automated transport workflows
-- {doc}`../examples/index`: Explore more transport examples
+- {doc}`../user_guide/workflows`: Learn about automated workflows
 - {doc}`../reference/calculations`: Detailed API reference
 
 ```{seealso}
