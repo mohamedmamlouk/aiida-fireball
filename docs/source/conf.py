@@ -41,7 +41,6 @@ extensions = [
     'myst_parser',
     'sphinx_copybutton',
     'sphinx.ext.todo',
-    'sphinx_design',
 ]
 
 templates_path = ['_templates']
@@ -90,9 +89,7 @@ html_title = f"{project} v{version}"
 html_short_title = project
 
 # Add custom CSS
-html_css_files = [
-    'custom.css',
-]
+html_css_files = []
 
 # -- Extension configuration -------------------------------------------------
 

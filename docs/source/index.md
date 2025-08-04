@@ -19,108 +19,43 @@
 
 ---
 
-## 🚀 What is AiiDA Fireball?
+## What is AiiDA Fireball?
 
-AiiDA Fireball is a cutting-edge plugin that seamlessly integrates the **Fireball semi-empirical DFT code** with the **AiiDA computational workflow management platform**. Designed for researchers who need efficient, scalable, and reproducible quantum mechanical calculations.
+AiiDA Fireball is a plugin that seamlessly integrates the **Fireball semi-empirical DFT code** with the **AiiDA computational workflow management platform**. Designed for researchers who need efficient, scalable, and reproducible quantum mechanical calculations.
 
-::::{grid} 1 2 2 3
-:gutter: 3
+## Key Features
 
-:::{grid-item-card} ⚡ Fast DFT Calculations
-High-performance semi-empirical density functional theory calculations with optimized algorithms.
-:::
+- **⚡ Fast DFT Calculations**: High-performance semi-empirical density functional theory calculations with optimized algorithms
+- **🌊 Transport Properties**: Advanced electronic transport property calculations with flexible optional files
+- **🔬 Workflow Automation**: Automated equation of state calculations and parameter optimization workflows
+- **📊 Data Provenance**: Full provenance tracking and workflow reproducibility for all calculations
+- **🚀 High-Throughput**: Designed for large-scale computational studies with parallel execution
+- **🔧 Easy Integration**: Seamless integration with existing AiiDA workflows and databases
 
-:::{grid-item-card} 🌊 Transport Properties  
-Advanced electronic transport property calculations with flexible optional files.
-:::
+## What You Can Do
 
-:::{grid-item-card} 🔬 Workflow Automation
-Automated equation of state calculations and parameter optimization workflows.
-:::
-
-:::{grid-item-card} 📊 Data Provenance
-Full provenance tracking and workflow reproducibility for all calculations.
-:::
-
-:::{grid-item-card} 🚀 High-Throughput
-Designed for large-scale computational studies with parallel execution.
-:::
-
-:::{grid-item-card} 🔧 Easy Integration
-Seamless integration with existing AiiDA workflows and databases.
-:::
-
-::::
-
----
-
-## 📋 Key Features
-
-- **Complete Fireball Integration**: Full support for all Fireball calculation types
-- **Advanced Transport Calculations**: State-of-the-art transport property calculations
-- **Flexible Input Management**: Support for optional files and complex input structures  
-- **Automated Workflows**: Built-in WorkChains for common calculation patterns
-- **Result Parsing**: Comprehensive parsing of output files and properties
-- **Error Handling**: Robust error detection and recovery mechanisms
-- **Documentation**: Extensive documentation with examples and tutorials
-
----
-
-## 🎯 Main Components
-
-::::{grid} 1 1 3 3
-:gutter: 3
-
-:::{grid-item-card} 🚀 Getting Started
-:link: user_guide/get_started
-:link-type: doc
-
-Quick setup and your first calculations
-^^^
+### Getting Started
+Quick setup and your first calculations:
 - Installation guide
 - Basic configuration  
 - Your first DFT run
 - Example workflows
 
-+++
-Learn the basics →
-:::
-
-:::{grid-item-card} 🌊 Transport Calculations
-:link: user_guide/tutorial
-:link-type: doc
-
-Advanced transport property analysis
-^^^
+### Transport Calculations
+Advanced transport property analysis:
 - Energy-dependent scanning
 - Optional file management
 - Result visualization
 - Performance optimization
 
-+++
-Explore transport →
-:::
-
-:::{grid-item-card} 🔧 Developer Guide
-:link: developer_guide/index
-:link-type: doc
-
-Extend and customize the plugin
-^^^
+### Developer Guide
+Extend and customize the plugin:
 - Plugin architecture
 - Adding new parsers
 - Custom workflows
 - Contributing guidelines
 
-+++
-Start developing →
-:::
-
-::::
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
@@ -165,9 +100,7 @@ inputs = {
 result = submit(workflow, inputs)
 ```
 
----
-
-## 📚 Documentation Structure
+## Documentation
 
 ```{toctree}
 :maxdepth: 2
@@ -177,17 +110,15 @@ user_guide/index
 developer_guide/index
 ```
 
----
-
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](https://github.com/mohamedmamlouk/aiida-fireball/blob/main/CONTRIBUTING.md) for details.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/mohamedmamlouk/aiida-fireball/blob/main/LICENSE) file for details.
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 - The AiiDA team for providing an excellent workflow management platform
 - The Fireball development team for the semi-empirical DFT code
