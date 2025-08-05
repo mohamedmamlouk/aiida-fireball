@@ -69,10 +69,8 @@ Source = "https://github.com/ValkScripter/aiida-fireball"
 "fireball.structure.interpolate" = "aiida_fireball.calculations.structure.tools:interpolate_structures"
 "fireball.structure.scale" = "aiida_fireball.calculations.structure.tools:scale_structure"
 "fireball.fireball" = "aiida_fireball.calculations.fireball:FireballCalculation"
-"fireball.birch_murnaghan_fit_bayesian" = "aiida_fireball.calculations.birch_murnaghan_fit_bayesian:birch_murnaghan_fit_bayesian"
 
 [project.entry-points."aiida.workflows"]
-"fireball.birch_murnaghan_relax" = "aiida_fireball.workflows.birch_murnaghan_relax:FireballBirchMurnaghanRelaxWorkChain"
 
 [project.entry-points."aiida.parsers"]
 "fireball.fireball" = "aiida_fireball.parsers.fireball:FireballParser"
