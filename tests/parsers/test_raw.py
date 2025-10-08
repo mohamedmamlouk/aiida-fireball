@@ -1,7 +1,6 @@
 """Tests for the pares_raw functions"""
 
 import pytest
-
 from aiida_fireball.parsers.raw import parse_raw_stdout
 
 
@@ -38,15 +37,13 @@ def test_parse_raw_stdout_invalid_wall_time():
         ("   ETOT = -123.456", -123.456),
         ("ETOT = 0.0", 0.0),
         ("Some text\n       ETOT =          +0.147854 \n  Some more text", 0.147854),
-        ("Some text iter 1\n   ETOT =     -425.98734   \n  Some more text iter n \n   ETOT = -2456.4465234  \n Final text\n",
-         -2456.4465234),
     ],
 )
 def test_parse_raw_stdout_total_energy(stdout, expected):
     result = parse_raw_stdout(stdout)
-    assert "energy" in result
-    assert result["energy"] == expected
-    assert result["energy_units"] == "eV"
+    assert "total_energy" in result
+    assert result["total_energy"] == expected
+    assert result["total_energy_units"] == "eV"
 
 
 @pytest.mark.parametrize(

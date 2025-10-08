@@ -49,30 +49,16 @@ def interpolate_structures(
 def scale_structure(
     structure: orm.StructureData,
     scale_factor: orm.Float,
-        scale_a: orm.Bool,
-        scale_b: orm.Bool,
-        scale_c: orm.Bool,
 ) -> orm.StructureData:
     """
-    Calcfunction to scale a structure (cell and positions) by a given factor along
-    the a, b, and c lattice vectors (if the corresponding `scale_a`, `scale_b`, and
-    `scale_c` flags are set to True).
+    Calcfunction to scale a structure (cell and positions) by a given factor.
 
     :param structure: the input `aiida.orm.StructureData`
     :param scale_factor: the scaling factor
-    :param scale_a: flag to scale the a lattice vector
-    :param scale_b: flag to scale the b lattice vector
-    :param scale_c: flag to scale the c lattice vector
     :return: the scaled `aiida.orm.StructureData`
     """
     ase_structure = structure.get_ase()
     ase_scaled = ase_structure.copy()
-    scales = [scale_a.value, scale_b.value, scale_c.value]
-    scale_factors = [
-        scale_factor.value if scale else 1.0 for scale in scales
-    ]
-    ase_scaled.set_cell(
-        np.diag(scale_factors) @ ase_structure.cell, scale_atoms=True
-    )
+    ase_scaled.set_cell(ase_structure.cell * scale_factor.value, scale_atoms=True)
 
     return orm.StructureData(ase=ase_scaled)

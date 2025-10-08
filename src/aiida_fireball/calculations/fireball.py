@@ -29,7 +29,7 @@ class FireballCalculation(CalcJob):
             "basisfile": _DEFAULT_BAS_FILE,
             "lvsfile": _DEFAULT_LVS_FILE,
             "kptpreference": _DEFAULT_KPTS_FILE,
-            "verbosity": 3,
+            #"verbosity": 3,
         }
     }
 
@@ -46,7 +46,7 @@ class FireballCalculation(CalcJob):
     _restart_copy_to = "./"
 
     @classmethod
-    def define(cls, spec):
+    def define(cls, spec):    #cette function déclare ce que l'utilisateur doit fournir et ce que le calcul renvoie
         """Define inputs and outputs of the calculation."""
         super().define(spec)
 
@@ -67,7 +67,7 @@ class FireballCalculation(CalcJob):
         }
         spec.inputs.validator = cls.validate_inputs
 
-        # Outputs
+        # Outputs extrained from the calculation aiida.out
         spec.output(
             "output_parameters",
             valid_type=Dict,
@@ -116,17 +116,6 @@ class FireballCalculation(CalcJob):
     @classmethod
     def validate_inputs(cls, value, _):  # pylint: disable=too-many-branches
         """Validate the entire inputs namespace."""
-
-        # Wrapping processes may choose to exclude certain input ports in which case we can't validate. If the ports
-        # have been excluded, and so are no longer part of the ``port_namespace``, skip the validation.
-        # if any(key not in port_namespace for key in ("fdata_remote", "structure")):
-        #     return
-
-        # At this point, both ports are part of the namespace, and both are required so return an error message if any
-        # of the two is missing.
-        # for key in ("fdata_remote", "structure"):
-        #     if key not in value:
-        #         return f"required value was not provided for the `{key}` namespace."
 
         if "settings" in value:
             settings = _uppercase_dict(value["settings"].get_dict(), dict_name="settings")
@@ -205,6 +194,59 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
                     return "Invalid values for 'Emin_tip' and 'Emax_tip' in the 'DOS' namelist. 'Emin_tip' must be less than 'Emax_tip'"
                 if dos_params["Emin"] > dos_params["Emax"]:
                     return "Invalid values for 'Emin' and 'Emax' in the 'DOS' namelist. 'Emin' must be less than 'Emax'"
+                
+            tr = settings.get("TRANSPORT", None)
+            if tr is not None:
+                # Ne rien exiger : aucun block n'est obligatoire
+                # Mais si un block est présent, il doit être complete
+
+                if "INTERACTION" in tr:
+                    inter = tr["INTERACTION"]
+                    needed = {"ncell1","total_atoms1","ninterval1","intervals1","natoms_tip1","atoms1",
+                              "ncell2","total_atoms2","ninterval2","intervals2","natoms_tip2","atoms2"}
+                    if not all(k in inter for k in needed):
+                        return "TRANSPORT.interaction missing mandatory keys"
+                    if not isinstance(inter["intervals1"], list) or not all(len(t)==2 for t in inter["intervals1"]):
+                        return "Invalid 'intervals1' format in TRANSPORT.interaction"
+                    if not isinstance(inter["intervals2"], list) or not all(len(t)==2 for t in inter["intervals2"]):
+                        return "Invalid 'intervals2' format in TRANSPORT.interaction"
+                    if not all(isinstance(i, int) for i in inter.get("atoms1",[])):
+                        return "Invalid 'atoms1' format in TRANSPORT.interaction"
+                    if not all(isinstance(i, int) for i in inter.get("atoms2",[])):
+                        return "Invalid 'atoms2' format in TRANSPORT.interaction"
+
+                if "ETA" in tr:
+                    eta = tr["ETA"]
+                    if "imag_part" not in eta or "intervals" not in eta:
+                        return "TRANSPORT.eta missing 'imag_part' or 'intervals'"
+                    if not isinstance(eta["intervals"], list):
+                        return "Invalid 'intervals' in TRANSPORT.eta"
+
+                if "TRANS" in tr:
+                    t = tr["TRANS"]
+                    needed = {"ieta","iwrt_trans","ichannel","ifithop","Ebottom","Etop","nsteps","eta"}
+                    if not all(k in t for k in needed):
+                        return "TRANSPORT.trans missing mandatory keys"
+                    if not isinstance(t["ieta"], bool) or not isinstance(t["iwrt_trans"], bool) or not isinstance(t["ichannel"], bool):
+                        return "TRANSPORT.trans boolean flags must be bool"
+                    if not isinstance(t["ifithop"], int) or t["ifithop"] not in (0,1):
+                        return "Invalid 'ifithop' in TRANSPORT.trans"
+                    try:
+                        float(t["Ebottom"]); float(t["Etop"]); int(t["nsteps"]); float(t["eta"])
+                    except Exception:
+                        return "Invalid numerical values in TRANSPORT.trans"
+
+                if "BIAS" in tr:
+                    bias = tr["BIAS"]
+                    for k in ("bias", "z_top", "z_bottom"):
+                        if k not in bias:
+                            return f"TRANSPORT.bias missing '{k}'"
+                    try:
+                        float(bias["bias"])
+                        float(bias["z_top"])
+                        float(bias["z_bottom"])
+                    except Exception:
+                        return "Invalid numerical values in TRANSPORT.bias"
 
             # Update settings with the new values
             value["settings"] = Dict(settings)
@@ -236,6 +278,15 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
         # Write the input file
         input_filecontent = self.generate_input(self.inputs.parameters.get_dict())
 
+        for fname in (self._DEFAULT_BAS_FILE, self._DEFAULT_LVS_FILE, self._DEFAULT_KPTS_FILE):
+            input_filecontent = input_filecontent.replace(f"'{fname}'", fname)
+
+        import re
+        input_filecontent = re.sub(
+            r"(dt\s*=\s*)'([0-9.+-EeDd]+)'",
+            r"\1\2",
+            input_filecontent
+        )
         with folder.open(self.metadata.options.input_filename, "w") as handle:
             handle.write(input_filecontent)
 
@@ -273,9 +324,25 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
             if dos_params is not None:
                 parent_output_parameters = self.inputs.parent_folder.creator.outputs.output_parameters.get_dict()
                 dos_optional_filecontent = self.generate_dos_optional(dos_params, parent_output_parameters.get("fermi_energy", 0.0))
-
+                
                 with folder.open("dos.optional", "w") as handle:
                     handle.write(dos_optional_filecontent)
+
+        if "TRANSPORT" in settings:
+            tr = settings.pop("TRANSPORT")
+            if "INTERACTION" in tr:
+                with folder.open("interaction.optional", "w") as handle:
+                    handle.write(self.generate_interaction_optional(tr["INTERACTION"]))
+            if "ETA" in tr:
+                with folder.open("eta.optional", "w") as handle:
+                    handle.write(self.generate_eta_optional(tr["ETA"]))
+            if "TRANS" in tr:
+                with folder.open("trans.optional", "w") as handle:
+                    handle.write(self.generate_trans_optional(tr["TRANS"]))
+            if "BIAS" in tr:
+                with folder.open("bias.optional", "w") as handle:
+                    handle.write(self.generate_bias_optional(tr["BIAS"]))
+
 
         # operations for restart
         symlink = settings.pop("PARENT_FOLDER_SYMLINK", self._default_symlink_usage)  # a boolean
@@ -321,6 +388,9 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
         calcinfo.retrieve_list += settings.pop("ADDITIONAL_RETRIEVE_LIST", [])
         calcinfo.retrieve_list += self._internal_retrieve_list
 
+        # Ajoute le fichier conductance.dat à récupérer
+        calcinfo.retrieve_list.append("conductance.dat")
+        calcinfo.retrieve_list.append("dens_TOT.dat")
         # Retrieve temporary files
         calcinfo.retrieve_temporary_list = []
         calcinfo.retrieve_temporary_list.append("answer.*")
@@ -433,3 +503,86 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
         file_lines.append(f"{dos_params['eta']:.6f}\t! eta")
 
         return "\n".join(file_lines) + "\n"
+    
+
+    @classmethod
+    def generate_interaction_optional(cls, params: dict) -> str:
+        lines = []
+        # Sample 1
+        lines.append(str(params.get("ncell1", 0)))
+        lines.append(str(params.get("total_atoms1", 0)))
+        lines.append(str(params.get("ninterval1", 1)))
+        for s, e in params.get("intervals1", []):
+            lines.append(f"{s}  {e}")
+        atoms1 = params.get("atoms1", [])
+        lines.append(str(params.get("natoms_tip1", len(atoms1))))
+        if atoms1:
+            lines.append(",".join(str(i) for i in atoms1))
+        # Sample 2
+        lines.append(str(params.get("ncell2", 0)))
+        lines.append(str(params.get("total_atoms2", 0)))
+        lines.append(str(params.get("ninterval2", 1)))
+        for s, e in params.get("intervals2", []):
+            lines.append(f"{s}  {e}")
+        atoms2 = params.get("atoms2", [])
+        lines.append(str(params.get("natoms_tip2", len(atoms2))))
+        if atoms2:
+            lines.append(",".join(str(i) for i in atoms2))
+        return "\n".join(lines) + "\n"
+
+    @classmethod
+    def generate_eta_optional(cls, params: dict) -> str:
+        lines = []
+        lines.append(str(params.get("imag_part", 0.0)))
+        intervals = params.get("intervals", [])
+        lines.append(str(len(intervals)))
+        for s, e in intervals:
+            lines.append(f"{s}   {e}")
+        return "\n".join(lines) + "\n"
+
+    @classmethod
+    def generate_trans_optional(cls, params: dict) -> str:
+        defaults = {
+            "ieta": False,
+            "iwrt_trans": False,
+            "ichannel": False,
+            "ifithop": 0,
+            "Ebottom": 0.0,
+            "Etop": 0.0,
+            "nsteps": 1,
+            "eta": 0.0,
+        }
+        merged = {**defaults, **params}
+        lines = []
+        for key in ("ieta", "iwrt_trans", "ichannel"):
+            lines.append("1" if merged[key] else "0")  # <-- ici
+        lines.append(str(merged["ifithop"]))
+        lines.append(str(merged["Ebottom"]))
+        lines.append(str(merged["Etop"]))
+        lines.append(str(merged["nsteps"]))
+        lines.append(str(merged["eta"]))
+        return "\n".join(lines) + "\n"
+
+    @classmethod
+    def generate_bias_optional(cls, params: dict) -> str:
+        """
+        Génère le contenu du fichier bias.optional.
+        params doit contenir : 'bias', 'z_top', 'z_bottom'
+        """
+        lines = [
+            str(params.get("bias", 0.0)),
+            str(params.get("z_top", 0.0)),
+            str(params.get("z_bottom", 0.0)),
+        ]
+        return "\n".join(lines) + "\n"
+
+    @classmethod
+    def generate_trans_optional_for_energy(cls, trans_params: dict, energy: float) -> str:
+        """
+        Génère le contenu du fichier trans.optional pour une énergie donnée.
+        Ebottom et Etop sont tous deux égaux à energy.
+        """
+        params = dict(trans_params)
+        params["Ebottom"] = energy
+        params["Etop"] = energy
+        return cls.generate_trans_optional(params)
