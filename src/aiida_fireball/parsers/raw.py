@@ -17,10 +17,14 @@ def parse_raw_stdout(stdout):
         parsed_data["wall_time_seconds"] = float(match.group(1))
 
     # Parse the total energy
-    match = re.search(r"ETOT\s*=\s*([+-]?\d+\.\d+)", stdout)
-    if match:
-        parsed_data["total_energy"] = float(match.group(1))
-        parsed_data["total_energy_units"] = "eV"
+    matches = re.findall(r"ETOT\s*=\s*([+-]?\d+\.\d+)", stdout)
+    if matches:
+        parsed_data["energy"] = float(matches[-1])
+        parsed_data["energy_units"] = "eV"
+
+    # Parse the energy trajectory
+    if matches:
+        parsed_data["energy_trajectory"] = list(map(float, matches))
 
     # Parse the Fermi energy
     match = re.search(r"Fermi Level\s*=\s*([+-]?\d+\.\d+)", stdout)

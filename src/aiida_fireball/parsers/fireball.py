@@ -2,7 +2,7 @@
 
 import os
 import re
-from typing import Optional, Tuple, List, Any, Dict as TyDict
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 from aiida import orm
@@ -20,7 +20,7 @@ class FireballParser(Parser):
 
     success_string = "(FIREBALL RUNTIME)|(That`sall for now)"
 
-    def parse(self, **kwargs) -> ExitCode | None:
+    def parse(self, **kwargs):
         """Parse outputs and store results in the database."""
         logs = get_logging_container()
 
@@ -53,7 +53,7 @@ class FireballParser(Parser):
         if output_trajectory:
             self.out("output_trajectory", output_trajectory)
 
-
+        # Parse transport-related optional files if present
         interaction = self.parse_interaction_optional(retrieved_temporary_folder)
         if interaction is not None:
             self.out("transport_interaction", orm.Dict(interaction))
@@ -109,7 +109,7 @@ class FireballParser(Parser):
 
     def parse_output_structure(
         self, retrieved_temporary_folder: str, rescale_factor: float, logs: AttributeDict
-    ) -> tuple[orm.StructureData | None, AttributeDict]:
+    ) -> tuple[Optional[orm.StructureData], AttributeDict]:
         """Parse the output structure from the 'answer.bas' file in the retrieved temporary folder.
         rescale_factor: used to rescale the input structure cell to the output structure cell.
         the answer.bas file contains the atomic positions of the output structure (already scaled).
@@ -143,7 +143,7 @@ class FireballParser(Parser):
 
     def parse_output_trajectory(
         self, retrieved_temporary_folder: str, rescale_factor: float, logs: AttributeDict
-    ) -> tuple[orm.TrajectoryData | None, AttributeDict]:
+    ) -> tuple[Optional[orm.TrajectoryData], AttributeDict]:
         """Parse the output trajectory from the 'answer.xyz' file in the retrieved temporary folder if it exists.
         rescale_factor: used to rescale the input structure cell to the output structure cells.
         the answer.xyz file contains the atomic positions of the output structures (already scaled).
@@ -162,9 +162,9 @@ class FireballParser(Parser):
         with open(answer_xyz_file, "r", encoding="utf-8") as handle:
             lines = handle.readlines()
             images: list[Atoms] = []
-            energies: list[float | None] = []
-            temperatures: list[float | None] = []
-            times: list[float | None] = []
+            energies: list[Optional[float]] = []
+            temperatures: list[Optional[float]] = []
+            times: list[Optional[float]] = []
             while len(lines) > 0:
                 symbols: list[str] = []
                 positions: list[list[float]] = []
@@ -206,64 +206,77 @@ class FireballParser(Parser):
         trajectory.set_array("energies", energies)
 
         return trajectory, logs
-    
-    def parse_interaction_optional(self, folder: str) -> Optional[TyDict[str, Any]]:
-        path = os.path.join(folder, 'interaction.optional')
+
+    def parse_interaction_optional(self, folder: str) -> Optional[Dict[str, Any]]:
+        path = os.path.join(folder, "interaction.optional")
         if not os.path.isfile(path):
             return None
-        data: TyDict[str, Any] = {}
+        data: Dict[str, Any] = {}
         with open(path) as f:
             lines = [l.strip() for l in f if l.strip()]
         idx = 0
-        data['ncell1'] = int(lines[idx]); idx += 1
-        data['ninterval1'] = int(lines[idx]); idx += 1
+        data["ncell1"] = int(lines[idx])
+        idx += 1
+        data["ninterval1"] = int(lines[idx])
+        idx += 1
         intervals1 = []
-        for _ in range(data['ninterval1']):
-            a, b = map(int, lines[idx].split()); intervals1.append((a, b)); idx += 1
-        data['intervals1'] = intervals1
-        data['atoms1'] = list(map(int, lines[idx].split(','))); idx += 1
-        data['ncell2'] = int(lines[idx]); idx += 1
-        data['ninterval2'] = int(lines[idx]); idx += 1
+        for _ in range(data["ninterval1"]):
+            a, b = map(int, lines[idx].split())
+            intervals1.append((a, b))
+            idx += 1
+        data["intervals1"] = intervals1
+        data["atoms1"] = list(map(int, lines[idx].split(",")))
+        idx += 1
+        data["ncell2"] = int(lines[idx])
+        idx += 1
+        data["ninterval2"] = int(lines[idx])
+        idx += 1
         intervals2 = []
-        for _ in range(data['ninterval2']):
-            a, b = map(int, lines[idx].split()); intervals2.append((a, b)); idx += 1
-        data['intervals2'] = intervals2
-        data['atoms2'] = list(map(int, lines[idx].split(',')))
+        for _ in range(data["ninterval2"]):
+            a, b = map(int, lines[idx].split())
+            intervals2.append((a, b))
+            idx += 1
+        data["intervals2"] = intervals2
+        data["atoms2"] = list(map(int, lines[idx].split(",")))
         return data
 
-    def parse_eta_optional(self, folder: str) -> Optional[TyDict[str, Any]]:
-        path = os.path.join(folder, 'eta.optional')
+    def parse_eta_optional(self, folder: str) -> Optional[Dict[str, Any]]:
+        path = os.path.join(folder, "eta.optional")
         if not os.path.isfile(path):
             return None
         with open(path) as f:
             lines = [l.strip() for l in f if l.strip()]
-        data: TyDict[str, Any] = {
-            'imag_part': float(lines[0]),
-            'nintervals': int(lines[1])
-        }
+        data: Dict[str, Any] = {"imag_part": float(lines[0]), "nintervals": int(lines[1])}
         intervals = []
         idx = 2
-        for _ in range(data['nintervals']):
-            a, b = map(int, lines[idx].split()); intervals.append((a, b)); idx += 1
-        data['intervals'] = intervals
+        for _ in range(data["nintervals"]):
+            a, b = map(int, lines[idx].split())
+            intervals.append((a, b))
+            idx += 1
+        data["intervals"] = intervals
         return data
 
-    def parse_trans_optional(self, folder: str) -> Optional[TyDict[str, Any]]:
-        path = os.path.join(folder, 'trans.optional')
+    def parse_trans_optional(self, folder: str) -> Optional[Dict[str, Any]]:
+        path = os.path.join(folder, "trans.optional")
         if not os.path.isfile(path):
             return None
         with open(path) as f:
             lines = [l.strip() for l in f if l.strip()]
-        keys = ['ieta', 'iwrt_trans', 'ichannel']
-        data: TyDict[str, Any] = {k: (lines[i] == 'TRUE') for i, k in enumerate(keys)}
+        keys = ["ieta", "iwrt_trans", "ichannel"]
+        data: Dict[str, Any] = {k: (lines[i] == "TRUE") for i, k in enumerate(keys)}
         idx = 3
-        data['ifithop'] = int(lines[idx]); idx += 1
-        data['Ebottom'] = float(lines[idx]); idx += 1
-        data['Etop'] = float(lines[idx]); idx += 1
-        data['nsteps'] = int(lines[idx]); idx += 1
-        data['eta'] = float(lines[idx])
+        data["ifithop"] = int(lines[idx])
+        idx += 1
+        data["Ebottom"] = float(lines[idx])
+        idx += 1
+        data["Etop"] = float(lines[idx])
+        idx += 1
+        data["nsteps"] = int(lines[idx])
+        idx += 1
+        data["eta"] = float(lines[idx])
         return data
-    def emit_logs(self, logs: list[AttributeDict] | tuple[AttributeDict] | AttributeDict, ignore: Optional[list] = None) -> None:
+
+    def emit_logs(self, logs: Union[list[AttributeDict], tuple[AttributeDict], AttributeDict], ignore: Optional[list] = None) -> None:
         """Emit the messages in one or multiple "log dictionaries" through the logger of the parser.
 
         A log dictionary is expected to have the following structure: each key must correspond to a log level of the
@@ -295,7 +308,7 @@ class FireballParser(Parser):
 
                     getattr(self.logger, level)(stripped)
 
-    def exit(self, exit_code: ExitCode | None = None, logs: AttributeDict | None = None) -> ExitCode:
+    def exit(self, exit_code: Optional[ExitCode] = None, logs: Optional[AttributeDict] = None) -> ExitCode:
         """Log all messages in the ``logs`` as well as the ``exit_code`` message and return the correct exit code.
 
         This is a utility function if one wants to return from the parse method and automatically add the ``logs`` and

@@ -6,6 +6,7 @@ import pytest
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.parsers import Parser
+
 from aiida_fireball.calculations.fireball import FireballCalculation
 from aiida_fireball.parsers.fireball import FireballParser
 
@@ -148,21 +149,13 @@ C 1.0 0.0 0.0
 """
     )
     # Fichier CHARGES minimal
-    (retrieve_temporary_folder / "CHARGES").write_text(
-        "0.1\n0.2\n"
-    )
+    (retrieve_temporary_folder / "CHARGES").write_text("0.1\n0.2\n")
     # Fichier eta.optional
-    (retrieve_temporary_folder / "eta.optional").write_text(
-        "0.05\n1\n1 5\n"
-    )
+    (retrieve_temporary_folder / "eta.optional").write_text("0.05\n1\n1 5\n")
     # Fichier trans.optional
-    (retrieve_temporary_folder / "trans.optional").write_text(
-        "TRUE\nFALSE\nTRUE\n1\n-2.0\n2.0\n4\n0.02\n"
-    )
+    (retrieve_temporary_folder / "trans.optional").write_text("TRUE\nFALSE\nTRUE\n1\n-2.0\n2.0\n4\n0.02\n")
     # Fichier interaction.optional
-    (retrieve_temporary_folder / "interaction.optional").write_text(
-        "0\n10\n1\n1 10\n2\n2,3\n0\n8\n1\n11 18\n3\n12,13,14\n"
-    )
+    (retrieve_temporary_folder / "interaction.optional").write_text("0\n10\n1\n1 10\n2\n2,3\n0\n8\n1\n11 18\n3\n12,13,14\n")
 
     retrieve_temporary_list = [
         "answer.bas",

@@ -9,6 +9,7 @@ from aiida.engine import CalcJob
 from aiida.orm import BandsData, Dict, KpointsData, RemoteData, StructureData, TrajectoryData
 
 from .utils import _lowercase_dict, _uppercase_dict, conv_to_fortran, convert_input_to_namelist_entry
+from .validation import validate_cgopt_params, validate_dos_params, validate_fixed_coords, validate_transport_params
 
 
 class FireballCalculation(CalcJob):
@@ -29,7 +30,7 @@ class FireballCalculation(CalcJob):
             "basisfile": _DEFAULT_BAS_FILE,
             "lvsfile": _DEFAULT_LVS_FILE,
             "kptpreference": _DEFAULT_KPTS_FILE,
-            #"verbosity": 3,
+            # "verbosity": 3,
         }
     }
 
@@ -46,7 +47,7 @@ class FireballCalculation(CalcJob):
     _restart_copy_to = "./"
 
     @classmethod
-    def define(cls, spec):    #cette function déclare ce que l'utilisateur doit fournir et ce que le calcul renvoie
+    def define(cls, spec):  # cette function déclare ce que l'utilisateur doit fournir et ce que le calcul renvoie
         """Define inputs and outputs of the calculation."""
         super().define(spec)
 
@@ -61,10 +62,11 @@ class FireballCalculation(CalcJob):
         spec.input("metadata.options.output_filename", valid_type=str, default=cls._DEFAULT_OUTPUT_FILE)
         spec.input("metadata.options.withmpi", valid_type=bool, default=False)
         spec.input("parent_folder", valid_type=RemoteData, required=False, help="The parent remote folder to restart from.")
-        spec.inputs["metadata"]["options"]["resources"].default = lambda: {
-            "num_machines": 1,
-            "num_cores_per_machine": 1,
-        }
+        spec.input("metadata.options.resources", valid_type=dict, default=lambda: {"num_machines": 1, "num_cores_per_machine": 1})
+        # spec.inputs["metadata"]["options"]["resources"].default = lambda: {
+        #     "num_machines": 1,
+        #     "num_cores_per_machine": 1,
+        # }
         spec.inputs.validator = cls.validate_inputs
 
         # Outputs extrained from the calculation aiida.out
@@ -88,6 +90,9 @@ class FireballCalculation(CalcJob):
         )
         spec.output("output_kpoints", valid_type=KpointsData, required=False)
         spec.output("output_atomic_occupations", valid_type=Dict, required=False)
+        spec.output("transport_interaction", valid_type=Dict, required=False)
+        spec.output("transport_eta", valid_type=Dict, required=False)
+        spec.output("transport_trans", valid_type=Dict, required=False)
         spec.default_output_node = "output_parameters"
 
         # Exit codes
@@ -114,150 +119,59 @@ class FireballCalculation(CalcJob):
         spec.exit_code(350, "ERROR_UNEXPECTED_PARSER_EXCEPTION", message="The parser raised an unexpected exception: {exception}")
 
     @classmethod
-    def validate_inputs(cls, value, _):  # pylint: disable=too-many-branches
-        """Validate the entire inputs namespace."""
+    def validate_inputs(cls, value, port_namespace):  # pylint: disable=too-many-branches
+        """Validate the entire inputs' namespace."""
+
+        # Wrapping processes may choose to exclude certain input ports, in which case we can't validate. If the ports
+        # have been excluded, and so are no longer part of the ``port_namespace``, skip the validation.
+        # if any(key not in port_namespace for key in ("fdata_remote", "structure")):
+        #     return None
+
+        # At this point, both ports are part of the namespace, and both are required so return an error message if any
+        # of the two is missing.
+        # for key in ("fdata_remote", "structure"):
+        #     if key not in value:
+        #         return f"required value was not provided for the `{key}` namespace."
+
+        messages = []
 
         if "settings" in value:
-            settings = _uppercase_dict(value["settings"].get_dict(), dict_name="settings")
+            settings: dict = _uppercase_dict(value["settings"].get_dict(), dict_name="settings")
+        else:
+            settings = {}
 
-            # Validate the FIXED_COORDS setting
-            fixed_coords = settings.get("FIXED_COORDS", None)
+        if "parameters" in value:
+            parameters: dict = _uppercase_dict(value["parameters"].get_dict(), dict_name="parameters")
+        else:
+            parameters = {}
 
-            if fixed_coords is not None:
-                fixed_coords = numpy.array(fixed_coords)
+        if "OPTION" in parameters and "iquench" in parameters["OPTION"] and parameters["OPTION"]["iquench"] in [-5, -4]:
+            if "CGOPT" not in settings:
+                settings.setdefault("CGOPT", {})
 
-                if len(fixed_coords.shape) != 2 or fixed_coords.shape[1] != 3:
-                    return "The `fixed_coords` setting must be a list of lists with length 3."
+        # Validate the FIXED_COORDS setting
+        messages.extend(validate_fixed_coords(value, settings, parameters))
 
-                if fixed_coords.dtype != bool:
-                    return "All elements in the `fixed_coords` setting lists must be either `True` or `False`."
+        # Validate the DOS settings
+        messages.extend(validate_dos_params(value, settings, parameters))
 
-                if "structure" in value:
-                    nsites = len(value["structure"].sites)
+        # Validate the CGOPT settings
+        messages.extend(validate_cgopt_params(value, settings, parameters))
 
-                    if len(fixed_coords) != nsites:
-                        return f"Input structure has {nsites} sites, but fixed_coords has length {len(fixed_coords)}"
+        # Validate the TRANSPORT settings
+        messages.extend(validate_transport_params(value, settings, parameters))
 
-            dos_params = settings.get("DOS", None)
+        # Update settings with the new values
+        value["settings"] = Dict(settings)
+        # Update parameters with the new values
+        value["parameters"] = Dict(parameters)
 
-            if dos_params is not None:
-                cls._blocked_keywords.setdefault("OUTPUT", {}).setdefault("iwrtdos", 1)
-                valid_keys = [
-                    "first_atom_index",
-                    "last_atom_index",
-                    "Emin",
-                    "Emax",
-                    "n_energy_steps",
-                    "eta",
-                    "iwrttip",
-                    "Emin_tip",
-                    "Emax_tip",
-                ]
-                defaults = {
-                    "first_atom_index": 1,
-                    "last_atom_index": len(value["structure"].sites),
-                    "eta": 0.1,
-                    "n_energy_steps": 100,
-                    "Emin": -5.0,
-                    "Emax": 5.0,
-                    "iwrttip": 0,  # writes the file tip_e_str.inp
-                    "Emin_tip": 0.0,
-                    "Emax_tip": 0.0,
-                }
-                # Emin and Emax are in eV and are relative to the Fermi level:
-                # conversion to Fireball format will be performed
-                # There will be (n_energy_steps + 1) energy points in the output DOS file
-                for key in dos_params:
-                    if key not in valid_keys:
-                        return f"Invalid key '{key}' in the 'DOS' namelist. Valid keys are: {valid_keys}"
-
-                for key, default in defaults.items():
-                    dos_params.setdefault(key, default)
-
-                if dos_params["first_atom_index"] < 1 or dos_params["first_atom_index"] > len(value["structure"].sites):
-                    return f"Invalid value for 'first_atom_index' in the 'DOS' namelist. \
-It must be between 1 and {len(value['structure'].sites)}"
-                if (
-                    dos_params["last_atom_index"] < 1
-                    or dos_params["last_atom_index"] > len(value["structure"].sites)
-                    or dos_params["last_atom_index"] < dos_params["first_atom_index"]
-                ):
-                    return f"Invalid value for 'last_atom_index' in the 'DOS' namelist. \
-It must be between 1 and {len(value['structure'].sites)} and greater than 'first_atom_index'"
-                if dos_params["n_energy_steps"] < 1:
-                    return "Invalid value for 'n_energy_steps' in the 'DOS' namelist. It must be greater than 0"
-                if dos_params["eta"] <= 0.0:
-                    return "Invalid value for 'eta' in the 'DOS' namelist. It must be greater than 0"
-                if dos_params["iwrttip"] not in [0, 1]:
-                    return "Invalid value for 'iwrttip' in the 'DOS' namelist. It must be either 0 or 1"
-                if dos_params["Emin_tip"] > dos_params["Emax_tip"]:
-                    return "Invalid values for 'Emin_tip' and 'Emax_tip' in the 'DOS' namelist. 'Emin_tip' must be less than 'Emax_tip'"
-                if dos_params["Emin"] > dos_params["Emax"]:
-                    return "Invalid values for 'Emin' and 'Emax' in the 'DOS' namelist. 'Emin' must be less than 'Emax'"
-                
-            tr = settings.get("TRANSPORT", None)
-            if tr is not None:
-                # Ne rien exiger : aucun block n'est obligatoire
-                # Mais si un block est présent, il doit être complete
-
-                if "INTERACTION" in tr:
-                    inter = tr["INTERACTION"]
-                    needed = {"ncell1","total_atoms1","ninterval1","intervals1","natoms_tip1","atoms1",
-                              "ncell2","total_atoms2","ninterval2","intervals2","natoms_tip2","atoms2"}
-                    if not all(k in inter for k in needed):
-                        return "TRANSPORT.interaction missing mandatory keys"
-                    if not isinstance(inter["intervals1"], list) or not all(len(t)==2 for t in inter["intervals1"]):
-                        return "Invalid 'intervals1' format in TRANSPORT.interaction"
-                    if not isinstance(inter["intervals2"], list) or not all(len(t)==2 for t in inter["intervals2"]):
-                        return "Invalid 'intervals2' format in TRANSPORT.interaction"
-                    if not all(isinstance(i, int) for i in inter.get("atoms1",[])):
-                        return "Invalid 'atoms1' format in TRANSPORT.interaction"
-                    if not all(isinstance(i, int) for i in inter.get("atoms2",[])):
-                        return "Invalid 'atoms2' format in TRANSPORT.interaction"
-
-                if "ETA" in tr:
-                    eta = tr["ETA"]
-                    if "imag_part" not in eta or "intervals" not in eta:
-                        return "TRANSPORT.eta missing 'imag_part' or 'intervals'"
-                    if not isinstance(eta["intervals"], list):
-                        return "Invalid 'intervals' in TRANSPORT.eta"
-
-                if "TRANS" in tr:
-                    t = tr["TRANS"]
-                    needed = {"ieta","iwrt_trans","ichannel","ifithop","Ebottom","Etop","nsteps","eta"}
-                    if not all(k in t for k in needed):
-                        return "TRANSPORT.trans missing mandatory keys"
-                    if not isinstance(t["ieta"], bool) or not isinstance(t["iwrt_trans"], bool) or not isinstance(t["ichannel"], bool):
-                        return "TRANSPORT.trans boolean flags must be bool"
-                    if not isinstance(t["ifithop"], int) or t["ifithop"] not in (0,1):
-                        return "Invalid 'ifithop' in TRANSPORT.trans"
-                    try:
-                        float(t["Ebottom"]); float(t["Etop"]); int(t["nsteps"]); float(t["eta"])
-                    except Exception:
-                        return "Invalid numerical values in TRANSPORT.trans"
-
-                if "BIAS" in tr:
-                    bias = tr["BIAS"]
-                    for k in ("bias", "z_top", "z_bottom"):
-                        if k not in bias:
-                            return f"TRANSPORT.bias missing '{k}'"
-                    try:
-                        float(bias["bias"])
-                        float(bias["z_top"])
-                        float(bias["z_bottom"])
-                    except Exception:
-                        return "Invalid numerical values in TRANSPORT.bias"
-
-            # Update settings with the new values
-            value["settings"] = Dict(settings)
+        return "\n".join(messages) if messages else None
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation job for submission by generating input files and parameters."""
 
-        if "settings" in self.inputs:
-            settings = _uppercase_dict(self.inputs.settings.get_dict(), dict_name="settings")
-        else:
-            settings = {}
+        settings = _uppercase_dict(self.inputs.settings.get_dict(), dict_name="settings") if "settings" in self.inputs else {}
 
         local_copy_list = []
         remote_copy_list = []
@@ -275,6 +189,11 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
             )
         )
 
+        def write_in_folder(folder: Folder, filename: str, content: str):
+            """Helper function to write content to a file in the given folder."""
+            with folder.open(filename, "w") as handle:
+                handle.write(content)
+
         # Write the input file
         input_filecontent = self.generate_input(self.inputs.parameters.get_dict())
 
@@ -282,67 +201,47 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
             input_filecontent = input_filecontent.replace(f"'{fname}'", fname)
 
         import re
-        input_filecontent = re.sub(
-            r"(dt\s*=\s*)'([0-9.+-EeDd]+)'",
-            r"\1\2",
-            input_filecontent
-        )
+
+        input_filecontent = re.sub(r"(dt\s*=\s*)'([0-9.+-EeDd]+)'", r"\1\2", input_filecontent)
         with folder.open(self.metadata.options.input_filename, "w") as handle:
             handle.write(input_filecontent)
 
         # Write the bas file
-        bas_filecontent = self.generate_bas(self.inputs.structure)
-
-        with folder.open(self._DEFAULT_BAS_FILE, "w") as handle:
-            handle.write(bas_filecontent)
+        write_in_folder(folder, self._DEFAULT_BAS_FILE, self.generate_bas(self.inputs.structure))
 
         # Write the lvs file
-        lvs_filecontent = self.generate_lvs(self.inputs.structure)
-
-        with folder.open(self._DEFAULT_LVS_FILE, "w") as handle:
-            handle.write(lvs_filecontent)
+        write_in_folder(folder, self._DEFAULT_LVS_FILE, self.generate_lvs(self.inputs.structure))
 
         # Write the kpts file
-        kpts_filecontent = self.generate_kpts(self.inputs.kpoints, self.inputs.structure)
+        write_in_folder(folder, self._DEFAULT_KPTS_FILE, self.generate_kpts(self.inputs.kpoints, self.inputs.structure))
 
-        with folder.open(self._DEFAULT_KPTS_FILE, "w") as handle:
-            handle.write(kpts_filecontent)
+        # Write the constraints file if the FIXED_COORDS setting is provided
+        if "FIXED_COORDS" in settings and settings["FIXED_COORDS"] is not None:
+            fixed_coords = settings.pop("FIXED_COORDS")
+            fixed_coords = numpy.array(fixed_coords)
+            write_in_folder(folder, "FRAGMENTS", self.generate_constraints(self.inputs.structure, fixed_coords))
 
-        # Write the constraints file if the setting is provided
-        if "FIXED_COORDS" in settings:
-            fixed_coords = settings.pop("FIXED_COORDS", None)
-            if fixed_coords is not None:
-                fixed_coords = numpy.array(fixed_coords)
-                constraints_filecontent = self.generate_constraints(self.inputs.structure, fixed_coords)
+        # Write the dos.optional file if the DOS setting is provided
+        if "DOS" in settings and settings["DOS"] is not None:
+            dos_params: dict = settings.pop("DOS")
+            parent_output_parameters = self.inputs.parent_folder.creator.outputs.output_parameters.get_dict()
+            write_in_folder(folder, "dos.optional", self.generate_dos_optional(dos_params, parent_output_parameters.get("fermi_energy", 0.0)))
 
-                with folder.open("FRAGMENTS", "w") as handle:
-                    handle.write(constraints_filecontent)
+        # Write the cgopt.optional file if the CGOPT setting is provided
+        if "CGOPT" in settings and settings["CGOPT"] is not None:
+            cgopt_params: dict = settings.pop("CGOPT")
+            write_in_folder(folder, "cgopt.optional", self.generate_cgopt_optional(cgopt_params))
 
-        # Write the dos.optional file if the setting is provided
-        if "DOS" in settings:
-            dos_params = settings.pop("DOS", None)
-            if dos_params is not None:
-                parent_output_parameters = self.inputs.parent_folder.creator.outputs.output_parameters.get_dict()
-                dos_optional_filecontent = self.generate_dos_optional(dos_params, parent_output_parameters.get("fermi_energy", 0.0))
-                
-                with folder.open("dos.optional", "w") as handle:
-                    handle.write(dos_optional_filecontent)
-
-        if "TRANSPORT" in settings:
-            tr = settings.pop("TRANSPORT")
-            if "INTERACTION" in tr:
-                with folder.open("interaction.optional", "w") as handle:
-                    handle.write(self.generate_interaction_optional(tr["INTERACTION"]))
-            if "ETA" in tr:
-                with folder.open("eta.optional", "w") as handle:
-                    handle.write(self.generate_eta_optional(tr["ETA"]))
-            if "TRANS" in tr:
-                with folder.open("trans.optional", "w") as handle:
-                    handle.write(self.generate_trans_optional(tr["TRANS"]))
-            if "BIAS" in tr:
-                with folder.open("bias.optional", "w") as handle:
-                    handle.write(self.generate_bias_optional(tr["BIAS"]))
-
+        if "TRANSPORT" in settings and settings["TRANSPORT"] is not None:
+            transport_params: dict = settings.pop("TRANSPORT")
+            if "INTERACTION" in transport_params:
+                write_in_folder(folder, "interaction.optional", self.generate_interaction_optional(transport_params["INTERACTION"]))
+            if "ETA" in transport_params:
+                write_in_folder(folder, "eta.optional", self.generate_eta_optional(transport_params["ETA"]))
+            if "TRANS" in transport_params:
+                write_in_folder(folder, "trans.optional", self.generate_trans_optional(transport_params["TRANS"]))
+            if "BIAS" in transport_params:
+                write_in_folder(folder, "bias.optional", self.generate_bias_optional(transport_params["BIAS"]))
 
         # operations for restart
         symlink = settings.pop("PARENT_FOLDER_SYMLINK", self._default_symlink_usage)  # a boolean
@@ -385,12 +284,9 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
         calcinfo.retrieve_list = []
         calcinfo.retrieve_list.append(self.metadata.options.output_filename)
         calcinfo.retrieve_list.append(self._CRASH_FILE)
-        calcinfo.retrieve_list += settings.pop("ADDITIONAL_RETRIEVE_LIST", [])
-        calcinfo.retrieve_list += self._internal_retrieve_list
+        calcinfo.retrieve_list.extend(settings.pop("ADDITIONAL_RETRIEVE_LIST", []))
+        calcinfo.retrieve_list.extend(self._internal_retrieve_list)
 
-        # Ajoute le fichier conductance.dat à récupérer
-        calcinfo.retrieve_list.append("conductance.dat")
-        calcinfo.retrieve_list.append("dens_TOT.dat")
         # Retrieve temporary files
         calcinfo.retrieve_temporary_list = []
         calcinfo.retrieve_temporary_list.append("answer.*")
@@ -453,7 +349,7 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
         """Generate the lvs file for the calculation (lattice vectors)."""
         ase_structure = structure.get_ase()
         file_lines = []
-        for vector in ase_structure.cell:
+        for vector in ase_structure.cell.array:
             file_lines.append(f"{conv_to_fortran(vector[0])} {conv_to_fortran(vector[1])} {conv_to_fortran(vector[2])}")
 
         return "\n".join(file_lines) + "\n"
@@ -485,7 +381,7 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
         file_lines.append(f"{len(ase_structure):3d}")
 
         for i, fix in zip(range(len(ase_structure)), fixed_coords):
-            file_lines.append(f"{i+1:3d} {int(fix[0]):1d} {int(fix[1]):1d} {int(fix[2]):1d}")
+            file_lines.append(f"{i + 1:3d} {int(fix[0]):1d} {int(fix[1]):1d} {int(fix[2]):1d}")
 
         return "\n".join(file_lines) + "\n"
 
@@ -496,14 +392,26 @@ It must be between 1 and {len(value['structure'].sites)} and greater than 'first
         file_lines.append(f"{dos_params['first_atom_index']:3d}\t{dos_params['last_atom_index']:3d}\t! First and last atom index")
         file_lines.append(f"{dos_params['n_energy_steps']}\t! Number of energy steps")
         file_lines.append(
-            f"{dos_params['Emin'] + fermi_energy:.6f}\t{(dos_params['Emax'] - dos_params['Emin'])/dos_params['n_energy_steps']}\t! Emin and dE"
+            f"{dos_params['Emin'] + fermi_energy:.6f}\t{(dos_params['Emax'] - dos_params['Emin']) / dos_params['n_energy_steps']}\t! Emin and dE"
         )
         file_lines.append(f"{dos_params['iwrttip']:1d}\t! iwrttip=1 writes the file tip_e_str.inp")
         file_lines.append(f"{dos_params['Emin_tip']:6f}\t{dos_params['Emax_tip']:6f}\t! Emin_tip and Emax_tip")
         file_lines.append(f"{dos_params['eta']:.6f}\t! eta")
 
         return "\n".join(file_lines) + "\n"
-    
+
+    def generate_cgopt_optional(self, cgopt_params: dict) -> str:
+        """Generate the content of the file cgopt.optional"""
+        file_lines = []
+        file_lines.append(f"{conv_to_fortran(cgopt_params['drmax'])} \t! drmax = Maximum atomic displacement")
+        file_lines.append(f"{conv_to_fortran(cgopt_params['dummy'])} \t! dummy = Scale to reduce the search step if e1 < e2")
+        file_lines.append(f"{conv_to_fortran(cgopt_params['energy_tol'])} \t! energy_tol = Energy tolerance for the search")
+        file_lines.append(f"{conv_to_fortran(cgopt_params['force_tol'])} \t! force_tol = Force tolerance for the search")
+        file_lines.append(f"{conv_to_fortran(cgopt_params['max_steps'])} \t! max_steps = Maximum number of CG steps")
+        file_lines.append(f"{conv_to_fortran(cgopt_params['min_int_steps'])} \t! min_int_steps = Minimum number of steps in the CG loop")
+        file_lines.append(f"{conv_to_fortran(cgopt_params['switch_MD'])} \t! switch_MD = Number of FIRE downhill steps after BFGS minimization fails")
+
+        return "\n".join(file_lines) + "\n"
 
     @classmethod
     def generate_interaction_optional(cls, params: dict) -> str:
