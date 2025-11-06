@@ -1,66 +1,62 @@
 name: ci
 
-on:
-  push:
-    # only pushes to main trigger
-    branches: [main]
-  pull_request:
-    # always triggered
+on: [push, pull_request]
+
+env:
+  FORCE_COLOR: 1
 
 jobs:
 
+  pre-commit:
+      runs-on: ubuntu-latest
+      steps:
+      -   uses: actions/checkout@v4
+
+      -   name: Set up Python
+          uses: actions/setup-python@v5
+          with:
+              python-version: '3.10'
+
+      -   name: Install Hatch
+          run: python -m pip install hatch
+
+      -   name: Run pre-commit
+          run: hatch run pre-commit:run
   tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        python-version: ['3.12']
-        aiida-version: ['stable']
-
-    services:
-      postgres:
-        image: postgres:10
-        env:
-          POSTGRES_DB: test_aiida
-          POSTGRES_PASSWORD: ''
-          POSTGRES_HOST_AUTH_METHOD: trust
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      rabbitmq:
-        image: rabbitmq:latest
-        ports:
-          - 5672:5672
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install project manager
-      run: |
-        pip install hatch
-    - name: Run test suite
-      env:
-        PYTEST_ADDOPTS: "--durations=0"
-      run: |
-        hatch test --cover
+      runs-on: ubuntu-latest
+      strategy:
+          matrix:
+              python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+      services:
+          postgres:
+              image: postgres:12
+          rabbitmq:
+              image: rabbitmq:latest
+              ports:
+              -   5672:5672
+      steps:
+      -   uses: actions/checkout@v4
+      -   name: Set up Python ${{ matrix.python-version }}
+          uses: actions/setup-python@v5
+          with:
+              python-version: ${{ matrix.python-version }}
+      -   name: Install Hatch
+          run: python -m pip install hatch
+      -   name: Run pytest
+          env:
+              AIIDA_WARN_v3: 1
+          run: hatch test -v -- -s
 
   docs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.10'
     - name: Install project manager
       run: |
         pip install hatch
@@ -73,10 +69,10 @@ jobs:
     timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.10'
     - name: Install project manager
       run: |
         pip install hatch
